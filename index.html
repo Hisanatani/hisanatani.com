@@ -3,361 +3,180 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>hisanatani.com · Content Tracker</title>
+<title>HiSanatani Tracker v2</title>
+
 <style>
+:root{
+  --bg:#f7f7f5;
+  --card:#ffffff;
+  --text:#1a1a1a;
+  --muted:#777;
+  --accent:#2d6a4f;
+  --border:#e5e5e5;
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
-.header{background:#fff;border-bottom:1px solid #e8e8e4;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.logo{font-size:15px;font-weight:600;color:#1a1a1a}
-.logo span{color:#888;font-weight:400;font-size:13px;margin-left:6px}
-.sync-btn{font-size:12px;padding:5px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#555;cursor:pointer}
-.sync-btn:hover{background:#f5f5f0}
-.tabs{background:#fff;border-bottom:1px solid #e8e8e4;padding:0 20px;display:flex;gap:0;overflow-x:auto}
-.tab{font-size:13px;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;color:#888;white-space:nowrap;flex-shrink:0}
-.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
-.tab:hover:not(.active){color:#1a1a1a}
-.content{padding:16px 20px;overflow-x:auto}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
-.filter-label{font-size:12px;color:#888}
-.chapter-btn{font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:20px;background:#fff;color:#555;cursor:pointer}
-.chapter-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.chapter-btn:hover:not(.active){border-color:#999;color:#1a1a1a}
-.search{font-size:13px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#1a1a1a;width:160px}
-.search:focus{outline:none;border-color:#999}
-.stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.stat{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:10px 16px;font-size:12px;color:#888}
-.stat strong{font-size:20px;font-weight:600;color:#1a1a1a;display:block}
-.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e8e8e4;background:#fff}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:#fff;font-weight:500;font-size:11px;color:#888;text-align:left;padding:8px 10px;border-bottom:1px solid #e8e8e4;white-space:nowrap;position:sticky;top:0;z-index:5}
-th.center,td.center{text-align:center}
-td{padding:7px 10px;border-bottom:1px solid #f0f0ec;color:#1a1a1a;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafaf8}
-.row-id{font-weight:600;font-size:13px;white-space:nowrap;color:#1a1a1a}
-.progress-wrap{display:flex;align-items:center;gap:6px;white-space:nowrap}
-.progress-pct{font-size:11px;color:#888;min-width:28px}
-.progress-bar{width:50px;height:4px;background:#e8e8e4;border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:#639922;border-radius:2px}
-.cb{width:15px;height:15px;cursor:pointer;accent-color:#639922}
-.saving-badge{font-size:11px;color:#2563eb;padding:3px 8px;background:#eff6ff;border-radius:4px;display:none}
-.error-bar{background:#fef2f2;color:#dc2626;font-size:13px;padding:10px 16px;border-radius:8px;margin-bottom:12px;border:1px solid #fecaca;display:none}
-.notice{font-size:13px;color:#666;padding:12px 16px;background:#fff;border-radius:8px;border:1px solid #e8e8e4;margin-bottom:12px;line-height:1.6}
-.setup-box{background:#fff;border:1px solid #e8e8e4;border-radius:12px;padding:28px;max-width:500px;margin:40px auto}
-.setup-box h2{font-size:18px;font-weight:600;margin-bottom:8px}
-.setup-box p{font-size:13px;color:#666;line-height:1.6;margin-bottom:14px}
-.setup-box input{width:100%;font-size:13px;padding:9px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#1a1a1a;margin-bottom:10px}
-.setup-box input:focus{outline:none;border-color:#999}
-.btn-primary{padding:9px 22px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500}
-.btn-primary:hover{background:#333}
-.sheet-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.sheet-tab{font-size:12px;padding:5px 12px;border:1px solid #ddd;border-radius:20px;cursor:pointer;color:#666;background:#fff;white-space:nowrap}
-.sheet-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.ref-content{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:20px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-x:auto}
-.manage-box{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:18px;margin-bottom:14px}
-.manage-box h3{font-size:14px;font-weight:600;margin-bottom:12px}
-.col-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0ec}
-.col-item:last-child{border-bottom:none}
-.col-letter{font-size:11px;color:#888}
-@media(max-width:600px){
-  .header{padding:10px 14px}
-  .content{padding:12px 14px}
-  .stats{gap:8px}
-  .stat{padding:8px 12px}
-  .stat strong{font-size:16px}
-  .search{width:110px}
+body{font-family:system-ui;background:var(--bg);color:var(--text)}
+
+.header{
+  position:sticky;top:0;
+  background:var(--card);
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+
+button{cursor:pointer}
+
+.container{padding:16px}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:12px;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  margin:6px 0;
+}
+
+.label{color:var(--muted);font-size:12px}
+
+input[type="text"]{
+  width:100%;padding:6px;
+  border:1px solid var(--border);
+  border-radius:6px;
+}
+
+input[type="checkbox"]{
+  transform:scale(1.2);
+}
+
+.stats{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.stat{background:var(--card);padding:10px;border-radius:8px;border:1px solid var(--border);font-size:12px}
+.stat strong{display:block;font-size:16px}
+
+@media(min-width:700px){
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 }
 </style>
 </head>
+
 <body>
 
 <div class="header">
-  <div class="logo">hisanatani.com <span>· Content Tracker</span></div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <span class="saving-badge" id="savingBadge">Saving...</span>
-    <button class="sync-btn" id="syncBtn" onclick="loadData()">↻ Sync</button>
-  </div>
+  <div><strong>HiSanatani Tracker</strong></div>
+  <button onclick="loadData()">Sync</button>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('checklist',this)">Content Checklist</div>
-  <div class="tab" onclick="switchTab('sheets',this)">Other Sheets</div>
-  <div class="tab" onclick="switchTab('manage',this)">Manage Columns ✦</div>
-</div>
-
-<div class="content">
-  <div id="errorBar" class="error-bar"></div>
-  <div id="tabContent"></div>
+<div class="container">
+  <div id="stats" class="stats"></div>
+  <div id="app"></div>
 </div>
 
 <script>
-const SHEET_ID = '13pUQeLmSwca3Jl4GCvOQ82Whiu79fgAfBAKi4PbhNKM';
-let API_KEY = localStorage.getItem('gapi_key') || '';
-let allSheetData = {};
-let sheetNames = [];
-let mainSheetName = '';
-let filterChapter = 'All';
-let filterText = '';
-let activeTab = 'checklist';
-let activeSubSheet = '';
+const SHEET_ID = "13pUQeLmSwca3Jl4GCvOQ82Whiu79fgAfBAKi4PbhNKM";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCS07Se2VgpSoK0qeYj-zm4DQzJK7n_Gse0OMc0y-0LxkacVi96vAt0aWq4FX66kQ/exec";
+const API_KEY = localStorage.getItem("gapi_key") || "";
 
-function switchTab(tab, el) {
-  activeTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+let data = [];
+let headers = [];
+
+async function loadData(){
+  if(!API_KEY){
+    const key = prompt("Enter API Key");
+    localStorage.setItem("gapi_key", key);
+    location.reload();
+  }
+
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Content Creation Flow?key=${API_KEY}`);
+  const json = await res.json();
+
+  headers = json.values[0];
+  data = json.values.slice(1);
+
   render();
 }
 
-function showError(msg) {
-  const el = document.getElementById('errorBar');
-  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+function detectType(val){
+  if(!val) return "text";
+  val = val.toUpperCase();
+  if(val === "TRUE" || val === "FALSE") return "checkbox";
+  return "text";
 }
 
-function showSaving(show) {
-  document.getElementById('savingBadge').style.display = show ? 'inline-block' : 'none';
-}
+function render(){
+  const app = document.getElementById("app");
+  const stats = document.getElementById("stats");
 
-async function loadData() {
-  const btn = document.getElementById('syncBtn');
-  btn.textContent = '↻ Loading...';
-  showError('');
-  if (!API_KEY) { showSetup(); btn.textContent = '↻ Sync'; return; }
-  try {
-    const metaR = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}&includeGridData=false`);
-    const meta = await metaR.json();
-    if (meta.error) throw new Error(meta.error.message);
-    sheetNames = meta.sheets.map(s => s.properties.title);
-    mainSheetName = sheetNames[0];
-    allSheetData = {};
+  let total = data.length;
+  let done = 0;
 
-    for (let i = 0; i < sheetNames.length; i++) {
-      const name = sheetNames[i];
-      const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
-      const d = await r.json();
-      if (d.error) continue;
-      const vals = d.values || [];
-      allSheetData[name] = {
-        headers: vals[0] || [],
-        rows: vals.slice(1).filter(r => r && r.length > 0 && (r[0] || '').toString().trim())
-      };
-    }
+  app.innerHTML = "";
 
-    if (!activeSubSheet || !sheetNames.slice(1).includes(activeSubSheet)) {
-      activeSubSheet = sheetNames[1] || '';
-    }
-    render();
-  } catch (e) {
-    showError('Error: ' + e.message + '. Check API key and sheet sharing (Anyone with link → Editor).');
-  }
-  btn.textContent = '↻ Sync';
-}
+  data.forEach((row, rIdx)=>{
+    let completed = true;
 
-async function saveCell(sheetName, rowIdx, colIdx, val) {
-  if (!API_KEY) return;
-  showSaving(true);
-  const range = `${sheetName}!${colToLetter(colIdx)}${rowIdx + 2}`;
-  try {
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [[val ? 'TRUE' : 'FALSE']] })
+    const card = document.createElement("div");
+    card.className = "card";
+
+    headers.forEach((h, cIdx)=>{
+      const val = row[cIdx] || "";
+      const type = detectType(val);
+
+      const field = document.createElement("div");
+      field.className = "row";
+
+      if(type === "checkbox"){
+        const checked = val === "TRUE";
+        if(!checked) completed = false;
+
+        field.innerHTML = `
+          <span class="label">${h}</span>
+          <input type="checkbox" ${checked?"checked":""}
+            onchange="updateCell(${rIdx},${cIdx}, this.checked)">
+        `;
+      } else {
+        field.innerHTML = `
+          <span class="label">${h}</span>
+          <input type="text" value="${val}"
+            onchange="updateCell(${rIdx},${cIdx}, this.value)">
+        `;
+      }
+
+      card.appendChild(field);
     });
-  } catch (e) { console.error(e); }
-  showSaving(false);
-}
 
-function colToLetter(n) {
-  let s = ''; n = n + 1;
-  while (n > 0) { s = String.fromCharCode(64 + (n % 26 || 26)) + s; n = Math.floor((n - 1) / 26); }
-  return s;
-}
+    if(completed) done++;
 
-function isBool(v) {
-  const s = (v || '').toString().toUpperCase().trim();
-  return s === 'TRUE' || s === 'FALSE';
-}
-
-function getCheckboxCols(headers, rows, startIdx) {
-  const cols = [];
-  headers.forEach((h, i) => {
-    if (i < startIdx) return;
-    let bools = 0, total = 0;
-    rows.forEach(r => { const v = (r[i] || '').toString().trim(); if (v) { total++; if (isBool(v)) bools++; } });
-    if (total > 0 && bools / total >= 0.4) cols.push({ idx: i, name: h });
-  });
-  return cols;
-}
-
-function rowProgress(r, cbCols) {
-  if (!cbCols.length) return 0;
-  const done = cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length;
-  return Math.round(done / cbCols.length * 100);
-}
-
-function getChapters(rows) {
-  const chs = new Set();
-  rows.forEach(r => { const ch = (r[0] || '').split('.')[0].trim(); if (ch) chs.add(ch); });
-  return ['All', ...Array.from(chs).sort((a, b) => {
-    const na = parseFloat(a), nb = parseFloat(b);
-    return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
-  })];
-}
-
-function render() {
-  const tc = document.getElementById('tabContent');
-  if (!API_KEY) { showSetup(); return; }
-  if (activeTab === 'checklist') renderTable(tc, mainSheetName, true);
-  else if (activeTab === 'sheets') renderOtherSheets(tc);
-  else renderManage(tc);
-}
-
-function renderTable(container, sheetName, isMain) {
-  const data = allSheetData[sheetName];
-  if (!data) { container.innerHTML = '<div class="notice">Click ↻ Sync to load data.</div>'; return; }
-
-  const { headers, rows } = data;
-  const startIdx = isMain ? 2 : 1;
-  const cbCols = getCheckboxCols(headers, rows, startIdx);
-
-  let displayRows = rows;
-  if (isMain) {
-    displayRows = rows.filter(r => {
-      const ch = (r[0] || '').split('.')[0].trim();
-      const chOk = filterChapter === 'All' || ch === filterChapter;
-      const txtOk = !filterText || (r[0] || '').toLowerCase().includes(filterText.toLowerCase()) || (r[1] || '').toLowerCase().includes(filterText.toLowerCase());
-      return chOk && txtOk;
-    });
-  }
-
-  const done = rows.filter(r => rowProgress(r, cbCols) === 100).length;
-  const totalCbs = cbCols.length * rows.length;
-  const checkedCbs = rows.reduce((a, r) => a + cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length, 0);
-  const pct = totalCbs ? Math.round(checkedCbs / totalCbs * 100) : 0;
-
-  let html = `<div class="stats" id="stats-${sheetName}">
-    <div class="stat"><strong>${rows.length}</strong>Total rows</div>
-    <div class="stat"><strong id="done-${sheetName}">${done}</strong>Fully done</div>
-    <div class="stat"><strong id="checked-${sheetName}">${checkedCbs}/${totalCbs}</strong>Tasks checked</div>
-    <div class="stat"><strong id="pct-${sheetName}">${pct}%</strong>Progress</div>
-  </div>`;
-
-  if (isMain) {
-    html += `<div class="toolbar">
-      <span class="filter-label">Chapter:</span>
-      ${getChapters(rows).map(c => `<button class="chapter-btn${c === filterChapter ? ' active' : ''}" onclick="filterChapter='${c}';render()">${c}</button>`).join('')}
-      <input class="search" placeholder="Search..." value="${filterText}" oninput="filterText=this.value;render()">
-    </div>`;
-  }
-
-  if (cbCols.length === 0) {
-    // No checkbox columns — render as plain text reference
-    const text = [headers, ...rows].map(r => r.join('   ')).join('\n');
-    container.innerHTML = html + `<div class="ref-content">${text.replace(/</g,'&lt;')}</div>`;
-    return;
-  }
-
-  html += `<div class="table-wrap"><table><thead><tr>
-    <th>${headers[0] || 'ID'}</th>
-    <th>Progress</th>
-    ${cbCols.map(c => `<th class="center" title="${c.name}">${c.name.length > 10 ? c.name.substring(0, 9) + '…' : c.name}</th>`).join('')}
-  </tr></thead><tbody>`;
-
-  displayRows.forEach(r => {
-    const realIdx = rows.indexOf(r);
-    const prog = rowProgress(r, cbCols);
-    html += `<tr>
-      <td class="row-id">${r[0] || ''}</td>
-      <td><div class="progress-wrap">
-        <span class="progress-pct">${prog}%</span>
-        <div class="progress-bar"><div class="progress-fill" style="width:${prog}%"></div></div>
-      </div></td>
-      ${cbCols.map(c => {
-        const val = (r[c.idx] || '').toString().toUpperCase() === 'TRUE';
-        return `<td class="center"><input type="checkbox" class="cb" ${val ? 'checked' : ''} onchange="toggleCell('${sheetName}',${realIdx},${c.idx},this.checked)"></td>`;
-      }).join('')}
-    </tr>`;
+    app.appendChild(card);
   });
 
-  html += `</tbody></table></div>`;
-  container.innerHTML = html;
+  stats.innerHTML = `
+    <div class="stat"><strong>${total}</strong>Total</div>
+    <div class="stat"><strong>${done}</strong>Completed</div>
+  `;
 }
 
-function toggleCell(sheetName, rowIdx, colIdx, checked) {
-  allSheetData[sheetName].rows[rowIdx][colIdx] = checked ? 'TRUE' : 'FALSE';
-  saveCell(sheetName, rowIdx, colIdx, checked);
-  const data = allSheetData[sheetName];
-  const startIdx = sheetName === mainSheetName ? 2 : 1;
-  const cbCols = getCheckboxCols(data.headers, data.rows, startIdx);
-  const done = data.rows.filter(r => rowProgress(r, cbCols) === 100).length;
-  const totalCbs = cbCols.length * data.rows.length;
-  const checkedCbs = data.rows.reduce((a, r) => a + cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length, 0);
-  const pct = totalCbs ? Math.round(checkedCbs / totalCbs * 100) : 0;
-  const d = document.getElementById('done-' + sheetName);
-  const ch = document.getElementById('checked-' + sheetName);
-  const p = document.getElementById('pct-' + sheetName);
-  if (d) d.textContent = done;
-  if (ch) ch.textContent = checkedCbs + '/' + totalCbs;
-  if (p) p.textContent = pct + '%';
+async function updateCell(row, col, value){
+  data[row][col] = value;
+
+  await fetch(SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      row: row + 2,
+      col: col + 1,
+      value: value === true ? "TRUE" : value === false ? "FALSE" : value
+    })
+  });
 }
 
-function renderOtherSheets(tc) {
-  const others = sheetNames.filter(n => n !== mainSheetName);
-  if (!others.length) { tc.innerHTML = '<div class="notice">No other sheets found.</div>'; return; }
-  if (!activeSubSheet || !others.includes(activeSubSheet)) activeSubSheet = others[0];
-
-  let html = `<div class="sheet-tabs">${others.map(n =>
-    `<div class="sheet-tab${n === activeSubSheet ? ' active' : ''}" onclick="activeSubSheet='${n}';renderOtherSheets(document.getElementById('tabContent'))">${n}</div>`
-  ).join('')}</div><div id="subSheetContent"></div>`;
-  tc.innerHTML = html;
-  renderTable(document.getElementById('subSheetContent'), activeSubSheet, false);
-}
-
-function renderManage(tc) {
-  const data = allSheetData[mainSheetName];
-  if (!data) { tc.innerHTML = '<div class="notice">Sync first.</div>'; return; }
-  const cbCols = getCheckboxCols(data.headers, data.rows, 2);
-  tc.innerHTML = `
-    <div class="notice">Columns auto-update from your Google Sheet headers. Add or rename in Sheets → click ↻ Sync.</div>
-    <div class="manage-box">
-      <h3>Checkbox columns in main sheet (${cbCols.length})</h3>
-      ${cbCols.map(c => `<div class="col-item"><span>${c.name}</span><span class="col-letter">Col ${colToLetter(c.idx)}</span></div>`).join('')}
-    </div>
-    <div class="manage-box">
-      <h3>All sheets (${sheetNames.length})</h3>
-      ${sheetNames.map((n, i) => {
-        const d = allSheetData[n];
-        const cbs = d ? getCheckboxCols(d.headers, d.rows, i === 0 ? 2 : 1).length : 0;
-        return `<div class="col-item">
-          <span>${n} ${i === 0 ? '<span style="font-size:10px;background:#f0f0ec;padding:2px 6px;border-radius:4px;margin-left:4px">main</span>' : ''}</span>
-          <span class="col-letter">${cbs} checkbox col${cbs !== 1 ? 's' : ''}</span>
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="manage-box">
-      <h3>How to add or rename columns</h3>
-      <p style="font-size:13px;color:#666;line-height:1.7">1. Open your Google Sheet<br>2. Edit any header in Row 1<br>3. For new columns: add header in Row 1, fill with TRUE/FALSE<br>4. Come back and click ↻ Sync — changes appear automatically</p>
-    </div>`;
-}
-
-function showSetup() {
-  document.getElementById('tabContent').innerHTML = `
-    <div class="setup-box">
-      <h2>Connect your Google Sheet</h2>
-      <p>Your Sheet ID is already built in. Paste your Google API key below.</p>
-      <p>Make sure your Google Sheet is shared:<br><strong>Share → Anyone with the link → Editor</strong></p>
-      <input id="apiKeyInput" placeholder="Paste your Google API key (AIza...)" value="${API_KEY}">
-      <br><br>
-      <button class="btn-primary" onclick="saveKey()">Connect & Load Data</button>
-    </div>`;
-}
-
-function saveKey() {
-  const k = document.getElementById('apiKeyInput').value.trim();
-  if (!k) return;
-  API_KEY = k; localStorage.setItem('gapi_key', k); loadData();
-}
-
-if (API_KEY) { loadData(); } else { showSetup(); }
+loadData();
 </script>
+
 </body>
 </html>
