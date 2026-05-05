@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Content Tracker</title>
-    <!-- Tailwind CSS for styling -->
+    <title>Content Tracker & Planner</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -14,445 +14,240 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#111827',
-                        accent: '#4f46e5',
-                        success: '#16a34a',
-                        surface: '#f9fafb'
+                        primary: '#0f172a',
+                        accent: '#6366f1',
+                        success: '#22c55e',
+                        bgMain: '#f8fafc'
                     }
                 }
             }
         }
     </script>
     <style>
-        /* App-like resets and utilities */
         * { -webkit-tap-highlight-color: transparent; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f3f4f6;
-            padding-bottom: env(safe-area-inset-bottom);
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: #f8fafc;
         }
-        /* Hide scrollbar for clean app feel */
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Custom Checkbox as a Pill Toggle */
-        .task-toggle input:checked + div {
-            background-color: #16a34a;
-            border-color: #16a34a;
-            color: white;
-        }
-        .task-toggle input:checked + div .check-icon { display: block; }
-        .task-toggle input:not(:checked) + div .check-icon { display: none; }
+        /* Deck-style checkbox toggle */
+        .deck-toggle input:checked + .toggle-bg { background-color: #22c55e; }
+        .deck-toggle input:checked + .toggle-bg .toggle-dot { transform: translateX(1.25rem); }
         
-        /* Smooth transitions */
-        .card-enter { animation: slideUp 0.3s ease-out forwards; }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
+        .card-anim { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        #toast-container {
-            transition: all 0.3s ease;
-            transform: translateY(-100%);
-            opacity: 0;
+        #toast {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(-120%);
         }
-        #toast-container.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        #toast.show { transform: translateY(0); }
     </style>
 </head>
-<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden">
+<body class="text-slate-900 antialiased h-screen flex flex-col overflow-hidden">
 
-    <!-- Top Sticky Header -->
-    <header class="bg-white px-4 py-3 shadow-sm z-50 flex justify-between items-center shrink-0">
-        <div class="flex items-center gap-2">
-            <div class="bg-primary text-white p-1.5 rounded-lg">
-                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 px-4 py-3 z-50 shrink-0 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <i data-lucide="layers" class="w-5 h-5 text-white"></i>
             </div>
             <div>
-                <h1 class="font-bold text-sm leading-tight text-primary">hisanatani.com</h1>
-                <p class="text-[10px] text-gray-500 font-medium tracking-wide uppercase">Content Tracker</p>
+                <h1 class="font-bold text-sm leading-none">hisanatani.com</h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-wider" id="current-sheet-label">Tracker</p>
             </div>
         </div>
-        <button id="syncBtn" onclick="loadData()" class="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="syncIcon"></i>
-            <span id="syncText">Sync</span>
+        <button onclick="loadData()" class="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors relative" id="syncBtn">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-slate-600" id="syncIcon"></i>
         </button>
     </header>
 
-    <!-- Global Toast Notification -->
-    <div class="absolute top-16 left-0 right-0 z-50 flex justify-center pointer-events-none px-4">
-        <div id="toast-container" class="bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs font-medium">
-            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-400" id="toast-icon"></i>
-            <span id="toast-msg">Saving changes...</span>
+    <!-- Global Feedback Toast -->
+    <div class="fixed top-4 left-0 right-0 z-[100] flex justify-center pointer-events-none">
+        <div id="toast" class="bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-3 text-sm font-medium">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-400" id="toast-icon"></i>
+            <span id="toast-msg">Syncing data...</span>
         </div>
     </div>
 
-    <!-- Main Scrollable Content Area -->
-    <main class="flex-1 overflow-y-auto no-scrollbar pb-24 relative" id="main-scroll">
-        <div id="errorBar" class="hidden mx-4 mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm shadow-sm"></div>
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto no-scrollbar pb-32" id="main-scroll">
+        <div id="errorDisplay" class="hidden m-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+            <span id="errorMsg"></span>
+        </div>
         
-        <div id="tabContent" class="p-4 w-full max-w-3xl mx-auto">
-            <!-- Dynamic content will render here -->
+        <div id="appContent" class="p-4 max-w-2xl mx-auto space-y-6">
+            <!-- Content will be injected here -->
         </div>
     </main>
 
-    <!-- Bottom App Navigation -->
-    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-50 pb-[env(safe-area-inset-bottom)] shrink-0">
-        <div class="flex justify-around items-center h-16 max-w-md mx-auto">
-            <button onclick="switchTab('checklist')" id="nav-checklist" class="nav-btn flex flex-col items-center justify-center w-full h-full text-accent">
-                <i data-lucide="check-circle-2" class="w-6 h-6 mb-1"></i>
-                <span class="text-[10px] font-medium">Checklist</span>
+    <!-- Bottom Menu Navigation -->
+    <nav class="bg-white/80 backdrop-blur-md border-t border-slate-200 fixed bottom-0 w-full z-50 pb-[env(safe-area-inset-bottom)]">
+        <div class="flex justify-around items-center h-16 max-w-lg mx-auto">
+            <button onclick="switchTab('tracker')" id="tab-tracker" class="flex flex-col items-center gap-1 text-accent">
+                <i data-lucide="layout-list" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Tracker</span>
             </button>
-            <button onclick="switchTab('sheets')" id="nav-sheets" class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600">
-                <i data-lucide="files" class="w-6 h-6 mb-1"></i>
-                <span class="text-[10px] font-medium">Sheets</span>
+            <button onclick="switchTab('planner')" id="tab-planner" class="flex flex-col items-center gap-1 text-slate-400">
+                <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Planner</span>
             </button>
-            <button onclick="switchTab('manage')" id="nav-manage" class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600">
-                <i data-lucide="settings" class="w-6 h-6 mb-1"></i>
-                <span class="text-[10px] font-medium">Manage</span>
+            <button onclick="switchTab('settings')" id="tab-settings" class="flex flex-col items-center gap-1 text-slate-400">
+                <i data-lucide="settings-2" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Settings</span>
             </button>
         </div>
     </nav>
 
 <script>
-// Configuration
 const SHEET_ID = '13pUQeLmSwca3Jl4GCvOQ82Whiu79fgAfBAKi4PbhNKM';
-// Pre-populated key from your prompt
-const DEFAULT_API_KEY = 'AIzaSyByRHRdnpDDHLxBnCBV27mSRu0tu_dlAhg'; 
+const DEFAULT_API_KEY = 'AIzaSyByRHRdnpDDHLxBnCBV27mSRu0tu_dlAhg';
 
 let API_KEY = DEFAULT_API_KEY;
-try {
-    API_KEY = localStorage.getItem('gapi_key') || DEFAULT_API_KEY;
-} catch (e) {
-    console.warn("Preview environment blocked localStorage. Using default key.");
-}
+try { API_KEY = localStorage.getItem('gapi_key') || DEFAULT_API_KEY; } catch(e){}
 
-// State
-let allSheetData = {};
-let sheetNames = [];
-let mainSheetName = '';
-let filterChapter = 'All';
-let filterText = '';
-let activeTab = 'checklist';
-let activeSubSheet = '';
+let appState = {
+    sheets: {},
+    names: [],
+    activeTab: 'tracker',
+    filters: {
+        chapter: 'All',
+        search: ''
+    }
+};
 
-// Initialize Icons on load
+// Initial Load
 document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
-    if (API_KEY) {
-        loadData();
-    } else {
-        switchTab('manage');
-    }
+    if (API_KEY) loadData();
+    else switchTab('settings');
 });
 
-function switchTab(tab) {
-    activeTab = tab;
-    
-    // Update bottom nav UI
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-accent');
-        btn.classList.add('text-gray-400');
-    });
-    const activeBtn = document.getElementById(`nav-${tab}`);
-    if(activeBtn) {
-        activeBtn.classList.remove('text-gray-400');
-        activeBtn.classList.add('text-accent');
-    }
-    
-    // Reset scroll
-    document.getElementById('main-scroll').scrollTop = 0;
-    
-    render();
-}
-
-function showToast(msg, isError = false, isSaving = false) {
-    const container = document.getElementById('toast-container');
-    const msgEl = document.getElementById('toast-msg');
-    const iconEl = document.getElementById('toast-icon');
-    
-    msgEl.textContent = msg;
-    
-    if (isSaving) {
-        iconEl.setAttribute('data-lucide', 'loader-2');
-        iconEl.classList.add('animate-spin', 'text-blue-400');
-        iconEl.classList.remove('text-red-400', 'text-green-400');
-    } else if (isError) {
-        iconEl.setAttribute('data-lucide', 'alert-circle');
-        iconEl.classList.remove('animate-spin', 'text-blue-400', 'text-green-400');
-        iconEl.classList.add('text-red-400');
-    } else {
-        iconEl.setAttribute('data-lucide', 'check');
-        iconEl.classList.remove('animate-spin', 'text-blue-400', 'text-red-400');
-        iconEl.classList.add('text-green-400');
-    }
-    
-    lucide.createIcons();
-    container.classList.add('show');
-    
-    if (!isSaving) {
-        setTimeout(() => {
-            container.classList.remove('show');
-        }, 2500);
-    }
-}
-
-function hideToast() {
-    document.getElementById('toast-container').classList.remove('show');
-}
-
-function showError(msg) {
-    const el = document.getElementById('errorBar');
-    el.innerHTML = `<div class="flex gap-2"><i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i><div>${msg}</div></div>`;
-    el.style.display = msg ? 'block' : 'none';
-    if(msg) lucide.createIcons();
-}
-
 async function loadData() {
-    const syncIcon = document.getElementById('syncIcon');
-    const syncText = document.getElementById('syncText');
-    
-    syncIcon.classList.add('animate-spin');
-    syncText.textContent = 'Syncing...';
-    showError('');
-    
-    if (!API_KEY) { 
-        switchTab('manage'); 
-        syncIcon.classList.remove('animate-spin');
-        syncText.textContent = 'Sync';
-        return; 
-    }
+    toggleSyncAnim(true);
+    showToast("Syncing latest data...", true);
     
     try {
-        const metaR = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}&includeGridData=false`);
-        const meta = await metaR.json();
+        const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
+        const meta = await metaRes.json();
         if (meta.error) throw new Error(meta.error.message);
         
-        sheetNames = meta.sheets.map(s => s.properties.title);
-        mainSheetName = sheetNames[0];
-        allSheetData = {};
+        appState.names = meta.sheets.map(s => s.properties.title);
+        appState.sheets = {};
 
-        for (let i = 0; i < sheetNames.length; i++) {
-            const name = sheetNames[i];
-            const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
-            const d = await r.json();
-            if (d.error) continue;
-            const vals = d.values || [];
-            allSheetData[name] = {
-                headers: vals[0] || [],
-                rows: vals.slice(1).filter(r => r && r.length > 0 && (r[0] || '').toString().trim())
-            };
+        for (const name of appState.names) {
+            const dataRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
+            const data = await dataRes.json();
+            if (data.values) {
+                appState.sheets[name] = {
+                    headers: data.values[0] || [],
+                    rows: data.values.slice(1).filter(r => r.length > 0 && r[0])
+                };
+            }
         }
-
-        if (!activeSubSheet || !sheetNames.slice(1).includes(activeSubSheet)) {
-            activeSubSheet = sheetNames[1] || '';
-        }
+        
+        hideError();
         render();
-        showToast("Data synced successfully");
+        showToast("Connected!", false);
     } catch (e) {
-        showError('Sync Error: ' + e.message + '. Please check API Key.');
+        showError(e.message);
+        showToast("Connection failed", false, true);
+    } finally {
+        toggleSyncAnim(false);
     }
-    
-    syncIcon.classList.remove('animate-spin');
-    syncText.textContent = 'Sync';
-}
-
-async function saveCell(sheetName, rowIdx, colIdx, val) {
-    if (!API_KEY) return;
-    showToast("Saving...", false, true);
-    
-    const range = `${sheetName}!${colToLetter(colIdx)}${rowIdx + 2}`;
-    try {
-        const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: [[val ? 'TRUE' : 'FALSE']] })
-        });
-        const data = await response.json();
-        if(data.error) throw new Error(data.error.message);
-        showToast("Progress saved!");
-    } catch (e) { 
-        console.error(e);
-        showToast("Could not save. Note: API keys usually allow read-only access. You may need an OAuth token for writing to Google Sheets.", true);
-    }
-}
-
-function colToLetter(n) {
-    let s = ''; n = n + 1;
-    while (n > 0) { s = String.fromCharCode(64 + (n % 26 || 26)) + s; n = Math.floor((n - 1) / 26); }
-    return s;
-}
-
-function isBool(v) {
-    const s = (v || '').toString().toUpperCase().trim();
-    return s === 'TRUE' || s === 'FALSE';
-}
-
-function getCheckboxCols(headers, rows, startIdx) {
-    const cols = [];
-    headers.forEach((h, i) => {
-        if (i < startIdx) return;
-        let bools = 0, total = 0;
-        rows.forEach(r => { const v = (r[i] || '').toString().trim(); if (v) { total++; if (isBool(v)) bools++; } });
-        if (total > 0 && bools / total >= 0.4) cols.push({ idx: i, name: h });
-    });
-    return cols;
-}
-
-function rowProgress(r, cbCols) {
-    if (!cbCols.length) return 0;
-    const done = cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length;
-    return Math.round(done / cbCols.length * 100);
-}
-
-function getChapters(rows) {
-    const chs = new Set();
-    rows.forEach(r => { const ch = (r[0] || '').split('.')[0].trim(); if (ch) chs.add(ch); });
-    return ['All', ...Array.from(chs).sort((a, b) => {
-        const na = parseFloat(a), nb = parseFloat(b);
-        return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
-    })];
 }
 
 function render() {
-    const tc = document.getElementById('tabContent');
-    if (!API_KEY) { switchTab('manage'); return; }
+    const container = document.getElementById('appContent');
+    const label = document.getElementById('current-sheet-label');
     
-    if (activeTab === 'checklist') renderChecklist(tc);
-    else if (activeTab === 'sheets') renderOtherSheets(tc);
-    else renderManage(tc);
+    if (appState.activeTab === 'tracker') {
+        label.textContent = "Content Tracker";
+        renderTracker(container);
+    } else if (appState.activeTab === 'planner') {
+        label.textContent = "Daily Planner";
+        renderPlanner(container);
+    } else {
+        label.textContent = "App Settings";
+        renderSettings(container);
+    }
     
     lucide.createIcons();
 }
 
-function renderChecklist(container) {
-    const data = allSheetData[mainSheetName];
-    if (!data) { 
-        container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-20 text-center">
-                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <i data-lucide="inbox" class="w-8 h-8 text-gray-400"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800">No Data Loaded</h3>
-                <p class="text-sm text-gray-500 mt-1 mb-4">Tap sync to load your sheet data.</p>
-                <button onclick="loadData()" class="bg-primary text-white px-5 py-2 rounded-full font-medium shadow-sm hover:bg-gray-800 transition-colors">Sync Now</button>
-            </div>`;
-        return; 
-    }
+function renderTracker(container) {
+    const sheetName = appState.names[0];
+    const data = appState.sheets[sheetName];
+    if (!data) return;
 
     const { headers, rows } = data;
-    const cbCols = getCheckboxCols(headers, rows, 2);
-
-    // Filters
-    let displayRows = rows.filter(r => {
-        const ch = (r[0] || '').split('.')[0].trim();
-        const chOk = filterChapter === 'All' || ch === filterChapter;
-        const txtOk = !filterText || (r[0] || '').toLowerCase().includes(filterText.toLowerCase()) || (r[1] || '').toLowerCase().includes(filterText.toLowerCase());
-        return chOk && txtOk;
-    });
-
-    // Stats
-    const totalCbs = cbCols.length * rows.length;
-    const checkedCbs = rows.reduce((a, r) => a + cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length, 0);
-    const overallPct = totalCbs ? Math.round(checkedCbs / totalCbs * 100) : 0;
-    const completedItems = rows.filter(r => rowProgress(r, cbCols) === 100).length;
+    const checkboxCols = getCheckboxColumns(headers, rows);
+    const chapters = getChapters(rows);
 
     let html = `
-        <!-- Stats Dashboard -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-base font-bold text-gray-800">Overview</h2>
-                <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md" id="overall-pct">${overallPct}% Complete</span>
+        <div class="sticky top-0 bg-bgMain/90 backdrop-blur-sm z-20 pb-4 space-y-3">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                <input type="text" placeholder="Search content..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm" value="${appState.filters.search}" oninput="appState.filters.search=this.value;render()">
             </div>
-            
-            <!-- Progress Bar -->
-            <div class="w-full bg-gray-100 rounded-full h-2.5 mb-4 overflow-hidden">
-                <div id="overall-bar" class="bg-success h-2.5 rounded-full transition-all duration-500" style="width: ${overallPct}%"></div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4 text-center divide-x divide-gray-100">
-                <div>
-                    <div class="text-2xl font-black text-gray-800">${rows.length}</div>
-                    <div class="text-[10px] uppercase font-semibold text-gray-400 mt-1">Items</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-black text-gray-800" id="stat-done">${completedItems}</div>
-                    <div class="text-[10px] uppercase font-semibold text-gray-400 mt-1">Finished</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-black text-gray-800" id="stat-tasks">${checkedCbs}</div>
-                    <div class="text-[10px] uppercase font-semibold text-gray-400 mt-1">Tasks Done</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Search & Filter -->
-        <div class="mb-6 sticky top-0 bg-[#f3f4f6] pt-1 pb-3 z-10">
-            <div class="relative mb-3">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i data-lucide="search" class="w-4 h-4 text-gray-400"></i>
-                </div>
-                <input type="text" class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent sm:text-sm transition-shadow shadow-sm" placeholder="Search content..." value="${filterText}" oninput="filterText=this.value;render()">
-            </div>
-
-            <div class="flex overflow-x-auto no-scrollbar gap-2 pb-1 snap-x">
-                ${getChapters(rows).map(c => `
-                    <button class="snap-start shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${c === filterChapter ? 'bg-primary text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}" onclick="filterChapter='${c}';render()">${c}</button>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                ${chapters.map(ch => `
+                    <button onclick="appState.filters.chapter='${ch}';render()" class="shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${appState.filters.chapter === ch ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200'}">
+                        ${ch}
+                    </button>
                 `).join('')}
             </div>
         </div>
-        
-        <!-- Cards List -->
-        <div class="space-y-4">
+        <div class="space-y-5">
     `;
 
-    if (displayRows.length === 0) {
-        html += `<div class="text-center py-10 text-gray-500 text-sm">No items match your filters.</div>`;
-    }
+    const filteredRows = rows.filter(r => {
+        const matchesChapter = appState.filters.chapter === 'All' || r[0].startsWith(appState.filters.chapter);
+        const matchesSearch = !appState.filters.search || (r[0]+r[1]).toLowerCase().includes(appState.filters.search.toLowerCase());
+        return matchesChapter && matchesSearch;
+    });
 
-    displayRows.forEach((r, idx) => {
-        const realIdx = rows.indexOf(r);
-        const prog = rowProgress(r, cbCols);
-        const title = r[1] || 'Untitled Item';
-        const idStr = r[0] || '';
+    filteredRows.forEach((row, rowIndex) => {
+        const id = row[0];
+        const title = row[1];
+        const prog = calculateRowProgress(row, checkboxCols);
         
         html += `
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-enter" style="animation-delay: ${Math.min(idx * 0.05, 0.5)}s">
-            <div class="p-4 border-b border-gray-50 flex justify-between items-start gap-3">
-                <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1.5">
-                        <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-wider">${idStr}</span>
-                    </div>
-                    <h3 class="text-[15px] font-bold text-gray-900 leading-snug">${title}</h3>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden card-anim">
+            <div class="p-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+                <div class="flex items-center gap-3">
+                    <span class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded uppercase">${id}</span>
+                    <h3 class="font-bold text-sm text-slate-800 truncate max-w-[180px]">${title}</h3>
                 </div>
-                
-                <!-- Circular Progress -->
-                <div class="relative shrink-0 flex items-center justify-center w-12 h-12">
-                    <svg class="w-12 h-12 transform -rotate-90">
-                        <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" class="text-gray-100" />
-                        <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="${20 * 2 * Math.PI}" stroke-dashoffset="${20 * 2 * Math.PI - (prog / 100) * 20 * 2 * Math.PI}" class="${prog === 100 ? 'text-success' : 'text-accent'} transition-all duration-500 ease-in-out" stroke-linecap="round" id="circle-${realIdx}" />
-                    </svg>
-                    <span class="absolute text-[10px] font-bold ${prog === 100 ? 'text-success' : 'text-gray-700'}" id="prog-text-${realIdx}">${prog}%</span>
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Progress</div>
+                    <div class="text-xs font-black text-indigo-600">${prog}%</div>
                 </div>
             </div>
             
-            <div class="p-4 bg-gray-50/50">
-                <div class="flex flex-wrap gap-2">
-                    ${cbCols.map(c => {
-                        const isChecked = (r[c.idx] || '').toString().toUpperCase() === 'TRUE';
-                        return `
-                        <label class="task-toggle relative cursor-pointer group">
-                            <input type="checkbox" class="sr-only" ${isChecked ? 'checked' : ''} onchange="toggleCell('${mainSheetName}', ${realIdx}, ${c.idx}, this.checked)">
-                            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 transition-all active:scale-95 shadow-sm">
-                                <i data-lucide="check" class="check-icon w-3 h-3"></i>
-                                ${c.name}
+            <!-- The Deck System -->
+            <div class="divide-y divide-slate-50">
+                ${checkboxCols.map(col => {
+                    const isChecked = (row[col.idx] || '').toString().toUpperCase() === 'TRUE';
+                    return `
+                    <div class="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full ${isChecked ? 'bg-success' : 'bg-slate-200'}"></div>
+                            <span class="text-sm font-semibold text-slate-700">${col.name}</span>
+                        </div>
+                        <label class="deck-toggle inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only" ${isChecked ? 'checked' : ''} onchange="updateCell('${sheetName}', ${rows.indexOf(row)}, ${col.idx}, this.checked)">
+                            <div class="toggle-bg w-10 h-5 bg-slate-200 rounded-full p-0.5 transition-colors duration-200 ease-in-out">
+                                <div class="toggle-dot w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out"></div>
                             </div>
                         </label>
-                        `;
-                    }).join('')}
-                </div>
+                    </div>`;
+                }).join('')}
             </div>
         </div>`;
     });
@@ -461,203 +256,184 @@ function renderChecklist(container) {
     container.innerHTML = html;
 }
 
-function toggleCell(sheetName, rowIdx, colIdx, checked) {
-    // Optimistic UI Update
-    allSheetData[sheetName].rows[rowIdx][colIdx] = checked ? 'TRUE' : 'FALSE';
-    
-    const data = allSheetData[sheetName];
-    const cbCols = getCheckboxCols(data.headers, data.rows, sheetName === mainSheetName ? 2 : 1);
-    
-    // Update Specific Card Progress
-    const row = data.rows[rowIdx];
-    const prog = rowProgress(row, cbCols);
-    
-    const circle = document.getElementById(`circle-${rowIdx}`);
-    const progText = document.getElementById(`prog-text-${rowIdx}`);
-    
-    if (circle && progText) {
-        const circumference = 20 * 2 * Math.PI;
-        circle.style.strokeDashoffset = circumference - (prog / 100) * circumference;
-        progText.textContent = `${prog}%`;
-        
-        if (prog === 100) {
-            circle.classList.remove('text-accent');
-            circle.classList.add('text-success');
-            progText.classList.remove('text-gray-700');
-            progText.classList.add('text-success');
-        } else {
-            circle.classList.add('text-accent');
-            circle.classList.remove('text-success');
-            progText.classList.add('text-gray-700');
-            progText.classList.remove('text-success');
-        }
-    }
-
-    // Update Overall Stats if on Main Sheet
-    if (sheetName === mainSheetName) {
-        const totalCbs = cbCols.length * data.rows.length;
-        const checkedCbs = data.rows.reduce((a, r) => a + cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length, 0);
-        const overallPct = totalCbs ? Math.round(checkedCbs / totalCbs * 100) : 0;
-        const completedItems = data.rows.filter(r => rowProgress(r, cbCols) === 100).length;
-
-        const elPct = document.getElementById('overall-pct');
-        const elBar = document.getElementById('overall-bar');
-        const elTasks = document.getElementById('stat-tasks');
-        const elDone = document.getElementById('stat-done');
-
-        if(elPct) elPct.textContent = `${overallPct}% Complete`;
-        if(elBar) elBar.style.width = `${overallPct}%`;
-        if(elTasks) elTasks.textContent = checkedCbs;
-        if(elDone) elDone.textContent = completedItems;
-    }
-
-    // Attempt Network Save
-    saveCell(sheetName, rowIdx, colIdx, checked);
-}
-
-function renderOtherSheets(container) {
-    const others = sheetNames.filter(n => n !== mainSheetName);
-    if (!others.length) { 
-        container.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-sm text-center border border-gray-100 mt-4 text-gray-500 text-sm">No secondary sheets found in this document.</div>`; 
-        return; 
-    }
-    if (!activeSubSheet || !others.includes(activeSubSheet)) activeSubSheet = others[0];
-
-    // Sub-nav for sheets
-    let html = `
-        <div class="mb-4 overflow-x-auto no-scrollbar">
-            <div class="flex gap-2 pb-2">
-                ${others.map(n => `
-                    <button onclick="activeSubSheet='${n}';render()" class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${n === activeSubSheet ? 'bg-primary text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}">${n}</button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    const data = allSheetData[activeSubSheet];
-    if(!data) {
-        container.innerHTML = html + `<p class="text-gray-500">Loading data...</p>`;
-        return;
-    }
+function renderPlanner(container) {
+    const sheetName = appState.names[1] || appState.names[0];
+    const data = appState.sheets[sheetName];
+    if (!data) return;
 
     const { headers, rows } = data;
-    const cbCols = getCheckboxCols(headers, rows, 1);
+    const checkboxCols = getCheckboxColumns(headers, rows);
+    
+    let html = `<div class="space-y-4">`;
 
-    if (cbCols.length > 0) {
-        // Render as checklist cards
-        html += `<div class="space-y-3">`;
-        rows.forEach((r, idx) => {
-            const prog = rowProgress(r, cbCols);
-            const title = r[0] || 'Untitled Item';
-            
-            html += `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-gray-800 text-sm">${title}</h3>
-                    <div class="text-xs font-bold ${prog === 100 ? 'text-success' : 'text-accent'} bg-gray-50 px-2 py-1 rounded">${prog}%</div>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    ${cbCols.map(c => {
-                        const isChecked = (r[c.idx] || '').toString().toUpperCase() === 'TRUE';
-                        return `
-                        <label class="task-toggle relative cursor-pointer">
-                            <input type="checkbox" class="sr-only" ${isChecked ? 'checked' : ''} onchange="toggleCell('${activeSubSheet}', ${idx}, ${c.idx}, this.checked)">
-                            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded border border-gray-200 bg-white text-xs font-medium text-gray-600 transition-all">
-                                <i data-lucide="check" class="check-icon w-3 h-3"></i>
-                                ${c.name}
+    rows.forEach((row, rowIndex) => {
+        const title = row[0] || 'Task';
+        html += `
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden card-anim">
+            <div class="p-4 bg-slate-50/50 border-b border-slate-100">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-indigo-500"></i>
+                    ${title}
+                </h3>
+            </div>
+            <div class="divide-y divide-slate-50">
+                ${checkboxCols.map(col => {
+                    const isChecked = (row[col.idx] || '').toString().toUpperCase() === 'TRUE';
+                    return `
+                    <div class="flex items-center justify-between p-4">
+                        <span class="text-sm font-semibold text-slate-600">${col.name}</span>
+                        <label class="deck-toggle inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only" ${isChecked ? 'checked' : ''} onchange="updateCell('${sheetName}', ${rowIndex}, ${col.idx}, this.checked)">
+                            <div class="toggle-bg w-10 h-5 bg-slate-200 rounded-full p-0.5 transition-colors">
+                                <div class="toggle-dot w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
                             </div>
                         </label>
-                        `;
-                    }).join('')}
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    } else {
-        // Render as clean simple table cards
-        html += `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-gray-600 whitespace-nowrap">
-                    <thead class="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 font-bold">
-                        <tr>${headers.map(h => `<th class="px-4 py-3">${h}</th>`).join('')}</tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        ${rows.map(r => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                ${headers.map((_, i) => `<td class="px-4 py-3">${r[i] || ''}</td>`).join('')}
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                    </div>`;
+                }).join('')}
             </div>
         </div>`;
-    }
+    });
 
+    html += `</div>`;
     container.innerHTML = html;
 }
 
-function renderManage(container) {
-    const data = allSheetData[mainSheetName];
-    
-    let html = `
-        <div class="mb-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-1">App Settings</h2>
-            <p class="text-sm text-gray-500">Manage connection and data layout.</p>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-5">
-            <div class="flex items-center gap-3 mb-4 text-accent">
-                <i data-lucide="key" class="w-5 h-5"></i>
-                <h3 class="font-bold text-gray-900">Google API Connection</h3>
+function renderSettings(container) {
+    container.innerHTML = `
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h2 class="text-lg font-black mb-1">Configuration</h2>
+            <p class="text-xs text-slate-500 mb-6 font-medium">Link your Google account for live sync.</p>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-2">Google Sheets ID</label>
+                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-mono text-slate-500 break-all">${SHEET_ID}</div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-2">Google API Key</label>
+                    <input type="password" id="apiKeyIn" value="${API_KEY}" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIza...">
+                </div>
+                <button onclick="saveApiKey()" class="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-lg">Save & Connect</button>
             </div>
-            
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Your API Key</label>
-            <input type="password" id="apiKeyInput" value="${API_KEY}" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-accent focus:outline-none mb-3 font-mono" placeholder="AIza...">
-            
-            <button onclick="saveKey()" class="w-full bg-primary hover:bg-gray-800 text-white font-semibold py-2.5 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-sm">
-                <i data-lucide="save" class="w-4 h-4"></i> Save & Reload
-            </button>
-            <p class="text-xs text-gray-400 mt-4 leading-relaxed"><i data-lucide="info" class="w-3 h-3 inline pb-0.5"></i> Ensure your Google Sheet is set to "Anyone with the link can edit". Writing progress back to the sheet using only an API Key may be restricted by Google's security policies.</p>
         </div>
     `;
-
-    if (data) {
-        const cbCols = getCheckboxCols(data.headers, data.rows, 2);
-        html += `
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h3 class="font-bold text-gray-900 mb-4 border-b border-gray-100 pb-3">Detected Layout</h3>
-            
-            <div class="space-y-4">
-                <div>
-                    <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Main Sheet (${mainSheetName})</div>
-                    <div class="flex flex-wrap gap-2">
-                        <div class="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-md font-medium border border-blue-100">ID Column</div>
-                        <div class="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-md font-medium border border-blue-100">Title Column</div>
-                        ${cbCols.map(c => `<div class="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-md font-medium border border-gray-200">${c.name} (Toggle)</div>`).join('')}
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    }
-
-    container.innerHTML = html;
 }
 
-function saveKey() {
-    const k = document.getElementById('apiKeyInput').value.trim();
-    if (!k) return;
-    API_KEY = k; 
+// Helpers
+function getCheckboxColumns(headers, rows) {
+    const cols = [];
+    headers.forEach((h, i) => {
+        // A column is a checkbox only if at least some rows contain TRUE/FALSE
+        let containsBool = false;
+        rows.slice(0, 20).forEach(r => {
+            const val = (r[i] || '').toString().toUpperCase();
+            if (val === 'TRUE' || val === 'FALSE') containsBool = true;
+        });
+        if (containsBool) cols.push({ idx: i, name: h });
+    });
+    return cols;
+}
+
+function calculateRowProgress(row, cbCols) {
+    if (!cbCols.length) return 0;
+    const done = cbCols.filter(c => (row[c.idx] || '').toString().toUpperCase() === 'TRUE').length;
+    return Math.round((done / cbCols.length) * 100);
+}
+
+function getChapters(rows) {
+    const chs = new Set();
+    rows.forEach(r => { 
+        const match = (r[0] || '').split('.')[0];
+        if (match) chs.add(match);
+    });
+    return ['All', ...Array.from(chs).sort()];
+}
+
+function updateCell(sheet, rowIdx, colIdx, val) {
+    // Update local state for instant UI feel
+    appState.sheets[sheet].rows[rowIdx][colIdx] = val ? 'TRUE' : 'FALSE';
+    render();
+    
+    // Save to Google Sheets
+    saveToSheet(sheet, rowIdx, colIdx, val);
+}
+
+async function saveToSheet(sheetName, rowIdx, colIdx, val) {
+    showToast("Saving...", true);
+    const colLetter = String.fromCharCode(65 + colIdx); // Simple A-Z
+    const range = `${sheetName}!${colLetter}${rowIdx + 2}`;
     
     try {
-        localStorage.setItem('gapi_key', k); 
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=RAW&key=${API_KEY}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: [[val ? 'TRUE' : 'FALSE']] })
+        });
+        if (!res.ok) throw new Error();
+        showToast("Progress Saved", false);
     } catch (e) {
-        console.warn("Preview environment blocked localStorage.");
+        showToast("Save Failed", false, true);
     }
-    
-    loadData();
-    showToast("API Key saved");
 }
 
+function switchTab(tab) {
+    appState.activeTab = tab;
+    document.querySelectorAll('nav button').forEach(b => {
+        b.classList.remove('text-accent');
+        b.classList.add('text-slate-400');
+    });
+    document.getElementById(`tab-${tab}`).classList.add('text-accent');
+    document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
+    render();
+}
+
+function saveApiKey() {
+    const key = document.getElementById('apiKeyIn').value.trim();
+    if (!key) return;
+    API_KEY = key;
+    try { localStorage.setItem('gapi_key', key); } catch(e){}
+    loadData();
+    switchTab('tracker');
+}
+
+function showToast(msg, isSaving, isError) {
+    const toast = document.getElementById('toast');
+    const msgEl = document.getElementById('toast-msg');
+    const icon = document.getElementById('toast-icon');
+    
+    msgEl.textContent = msg;
+    toast.classList.add('show');
+    
+    if (isSaving) {
+        icon.className = "w-4 h-4 animate-spin text-indigo-400";
+        icon.setAttribute('data-lucide', 'loader-2');
+    } else if (isError) {
+        icon.className = "w-4 h-4 text-red-400";
+        icon.setAttribute('data-lucide', 'alert-circle');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    } else {
+        icon.className = "w-4 h-4 text-green-400";
+        icon.setAttribute('data-lucide', 'check');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+    lucide.createIcons();
+}
+
+function showError(msg) {
+    const el = document.getElementById('errorDisplay');
+    document.getElementById('errorMsg').textContent = msg;
+    el.classList.remove('hidden');
+}
+
+function hideError() {
+    document.getElementById('errorDisplay').classList.add('hidden');
+}
+
+function toggleSyncAnim(active) {
+    const icon = document.getElementById('syncIcon');
+    if (active) icon.classList.add('animate-spin');
+    else icon.classList.remove('animate-spin');
+}
 </script>
 </body>
 </html>
