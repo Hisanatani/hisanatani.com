@@ -1,383 +1,363 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>hisanatani.com Deck</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .deck-card { transition: transform 0.2s ease; }
-        .deck-card:active { transform: scale(0.98); }
-        
-        /* Custom Toggle Style */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #e2e8f0;
-            transition: .3s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px; width: 18px;
-            left: 3px; bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        input:checked + .slider { background-color: #22c55e; }
-        input:checked + .slider:before { transform: translateX(20px); }
-
-        #toast {
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateY(150%);
-        }
-        #toast.show { transform: translateY(0); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hisanatani.com · Content Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e8e8e4;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:600;color:#1a1a1a}
+.logo span{color:#888;font-weight:400;font-size:13px;margin-left:6px}
+.sync-btn{font-size:12px;padding:5px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#555;cursor:pointer}
+.sync-btn:hover{background:#f5f5f0}
+.tabs{background:#fff;border-bottom:1px solid #e8e8e4;padding:0 20px;display:flex;gap:0;overflow-x:auto}
+.tab{font-size:13px;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;color:#888;white-space:nowrap;flex-shrink:0}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.tab:hover:not(.active){color:#1a1a1a}
+.content{padding:16px 20px;overflow-x:auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.filter-label{font-size:12px;color:#888}
+.chapter-btn{font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:20px;background:#fff;color:#555;cursor:pointer}
+.chapter-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.chapter-btn:hover:not(.active){border-color:#999;color:#1a1a1a}
+.search{font-size:13px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#1a1a1a;width:160px}
+.search:focus{outline:none;border-color:#999}
+.stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:10px 16px;font-size:12px;color:#888}
+.stat strong{font-size:20px;font-weight:600;color:#1a1a1a;display:block}
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e8e8e4;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#fff;font-weight:500;font-size:11px;color:#888;text-align:left;padding:8px 10px;border-bottom:1px solid #e8e8e4;white-space:nowrap;position:sticky;top:0;z-index:5}
+th.center,td.center{text-align:center}
+td{padding:7px 10px;border-bottom:1px solid #f0f0ec;color:#1a1a1a;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.row-id{font-weight:600;font-size:13px;white-space:nowrap;color:#1a1a1a}
+.progress-wrap{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.progress-pct{font-size:11px;color:#888;min-width:28px}
+.progress-bar{width:50px;height:4px;background:#e8e8e4;border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:#639922;border-radius:2px}
+.cb{width:15px;height:15px;cursor:pointer;accent-color:#639922}
+.saving-badge{font-size:11px;color:#2563eb;padding:3px 8px;background:#eff6ff;border-radius:4px;display:none}
+.error-bar{background:#fef2f2;color:#dc2626;font-size:13px;padding:10px 16px;border-radius:8px;margin-bottom:12px;border:1px solid #fecaca;display:none}
+.notice{font-size:13px;color:#666;padding:12px 16px;background:#fff;border-radius:8px;border:1px solid #e8e8e4;margin-bottom:12px;line-height:1.6}
+.setup-box{background:#fff;border:1px solid #e8e8e4;border-radius:12px;padding:28px;max-width:500px;margin:40px auto}
+.setup-box h2{font-size:18px;font-weight:600;margin-bottom:8px}
+.setup-box p{font-size:13px;color:#666;line-height:1.6;margin-bottom:14px}
+.setup-box input{width:100%;font-size:13px;padding:9px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#1a1a1a;margin-bottom:10px}
+.setup-box input:focus{outline:none;border-color:#999}
+.btn-primary{padding:9px 22px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500}
+.btn-primary:hover{background:#333}
+.sheet-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.sheet-tab{font-size:12px;padding:5px 12px;border:1px solid #ddd;border-radius:20px;cursor:pointer;color:#666;background:#fff;white-space:nowrap}
+.sheet-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.ref-content{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:20px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-x:auto}
+.manage-box{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:18px;margin-bottom:14px}
+.manage-box h3{font-size:14px;font-weight:600;margin-bottom:12px}
+.col-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0ec}
+.col-item:last-child{border-bottom:none}
+.col-letter{font-size:11px;color:#888}
+@media(max-width:600px){
+  .header{padding:10px 14px}
+  .content{padding:12px 14px}
+  .stats{gap:8px}
+  .stat{padding:8px 12px}
+  .stat strong{font-size:16px}
+  .search{width:110px}
+}
+</style>
 </head>
-<body class="pb-24">
+<body>
 
-    <!-- Sticky Header -->
-    <header class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 z-50 flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-                <i data-lucide="layout-grid" class="w-5 h-5 text-white"></i>
-            </div>
-            <div>
-                <h1 class="text-sm font-extrabold text-slate-900 leading-tight">hisanatani.com</h1>
-                <p id="active-sheet-name" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Loading...</p>
-            </div>
-        </div>
-        <button onclick="loadData()" class="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full active:bg-slate-200 transition-colors">
-            <i data-lucide="refresh-cw" id="sync-icon" class="w-4 h-4 text-slate-600"></i>
-        </button>
-    </header>
+<div class="header">
+  <div class="logo">hisanatani.com <span>· Content Tracker</span></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="saving-badge" id="savingBadge">Saving...</span>
+    <button class="sync-btn" id="syncBtn" onclick="loadData()">↻ Sync</button>
+  </div>
+</div>
 
-    <!-- Content Area -->
-    <main id="main-content" class="p-4 max-w-2xl mx-auto">
-        <div id="loader" class="py-20 text-center">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-slate-900"></div>
-            <p class="text-slate-500 text-xs font-bold mt-4 uppercase tracking-tighter">Initializing Deck...</p>
-        </div>
-    </main>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('checklist',this)">Content Checklist</div>
+  <div class="tab" onclick="switchTab('sheets',this)">Other Sheets</div>
+  <div class="tab" onclick="switchTab('manage',this)">Manage Columns ✦</div>
+</div>
 
-    <!-- Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center z-50">
-        <button onclick="switchView('tracker')" id="nav-tracker" class="flex flex-col items-center gap-1 text-indigo-600">
-            <i data-lucide="check-square" class="w-6 h-6"></i>
-            <span class="text-[10px] font-extrabold uppercase">Tracker</span>
-        </button>
-        <button onclick="switchView('planner')" id="nav-planner" class="flex flex-col items-center gap-1 text-slate-400">
-            <i data-lucide="calendar" class="w-6 h-6"></i>
-            <span class="text-[10px] font-extrabold uppercase">Planner</span>
-        </button>
-        <button onclick="switchView('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400">
-            <i data-lucide="settings" class="w-6 h-6"></i>
-            <span class="text-[10px] font-extrabold uppercase">Setup</span>
-        </button>
-    </nav>
-
-    <!-- Global Toast Notification -->
-    <div class="fixed bottom-24 left-0 right-0 flex justify-center z-[60] pointer-events-none">
-        <div id="toast" class="bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold">
-            <div id="toast-spinner" class="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full hidden"></div>
-            <i id="toast-icon" data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
-            <span id="toast-text">Sync Complete</span>
-        </div>
-    </div>
+<div class="content">
+  <div id="errorBar" class="error-bar"></div>
+  <div id="tabContent"></div>
+</div>
 
 <script>
 const SHEET_ID = '13pUQeLmSwca3Jl4GCvOQ82Whiu79fgAfBAKi4PbhNKM';
 let API_KEY = localStorage.getItem('gapi_key') || '';
+let allSheetData = {};
+let sheetNames = [];
+let mainSheetName = '';
+let filterChapter = 'All';
+let filterText = '';
+let activeTab = 'checklist';
+let activeSubSheet = '';
 
-let appData = {
-    sheets: {},
-    names: [],
-    activeTab: 'tracker',
-    search: '',
-    chapter: 'All'
-};
-
-async function loadData() {
-    if (!API_KEY) { switchView('settings'); return; }
-    
-    document.getElementById('sync-icon').classList.add('animate-spin');
-    showToast("Fetching Sheets...", true);
-
-    try {
-        const metaRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`, {
-             method: 'GET'
-        }).catch(() => {
-            // Fallback for direct Google Sheets API if available
-        });
-
-        const gSheetMetaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
-        const meta = await gSheetMetaRes.json();
-        if (meta.error) throw new Error(meta.error.message);
-        
-        appData.names = meta.sheets.map(s => s.properties.title);
-        
-        for (const name of appData.names) {
-            const dataRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
-            const data = await dataRes.json();
-            
-            const rawValues = data.values || [];
-            appData.sheets[name] = {
-                headers: rawValues.length > 0 ? rawValues[0] : [],
-                rows: rawValues.length > 1 ? rawValues.slice(1).filter(r => r && r.length > 0 && r[0]) : []
-            };
-        }
-        
-        render();
-        showToast("Synced Successfully", false);
-    } catch (err) {
-        console.error(err);
-        showToast("Sync Error", false, true);
-    } finally {
-        document.getElementById('sync-icon').classList.remove('animate-spin');
-    }
+function switchTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
 }
 
-function getCheckboxCols(headers, rows) {
-    if (!headers || !rows) return [];
-    // Detect columns that primarily contain TRUE/FALSE
-    return headers.map((name, idx) => {
-        let isCheck = false;
-        // Check first 10 rows to see if it's a boolean column
-        for(let i=0; i<Math.min(rows.length, 10); i++) {
-            const val = String(rows[i][idx] || '').toUpperCase();
-            if (val === 'TRUE' || val === 'FALSE' || rows[i][idx] === undefined) {
-                isCheck = true;
-            } else if (val.trim() !== "") {
-                isCheck = false;
-                break;
-            }
-        }
-        return isCheck ? { name, idx } : null;
-    }).filter(c => c !== null && c.idx > 1); // Skip ID and Chapter
+function showError(msg) {
+  const el = document.getElementById('errorBar');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+function showSaving(show) {
+  document.getElementById('savingBadge').style.display = show ? 'inline-block' : 'none';
+}
+
+async function loadData() {
+  const btn = document.getElementById('syncBtn');
+  btn.textContent = '↻ Loading...';
+  showError('');
+  if (!API_KEY) { showSetup(); btn.textContent = '↻ Sync'; return; }
+  try {
+    const metaR = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}&includeGridData=false`);
+    const meta = await metaR.json();
+    if (meta.error) throw new Error(meta.error.message);
+    sheetNames = meta.sheets.map(s => s.properties.title);
+    mainSheetName = sheetNames[0];
+    allSheetData = {};
+
+    for (let i = 0; i < sheetNames.length; i++) {
+      const name = sheetNames[i];
+      const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
+      const d = await r.json();
+      if (d.error) continue;
+      const vals = d.values || [];
+      allSheetData[name] = {
+        headers: vals[0] || [],
+        rows: vals.slice(1).filter(r => r && r.length > 0 && (r[0] || '').toString().trim())
+      };
+    }
+
+    if (!activeSubSheet || !sheetNames.slice(1).includes(activeSubSheet)) {
+      activeSubSheet = sheetNames[1] || '';
+    }
+    render();
+  } catch (e) {
+    showError('Error: ' + e.message + '. Check API key and sheet sharing (Anyone with link → Editor).');
+  }
+  btn.textContent = '↻ Sync';
+}
+
+async function saveCell(sheetName, rowIdx, colIdx, val) {
+  if (!API_KEY) return;
+  showSaving(true);
+  const range = `${sheetName}!${colToLetter(colIdx)}${rowIdx + 2}`;
+  try {
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [[val ? 'TRUE' : 'FALSE']] })
+    });
+  } catch (e) { console.error(e); }
+  showSaving(false);
+}
+
+function colToLetter(n) {
+  let s = ''; n = n + 1;
+  while (n > 0) { s = String.fromCharCode(64 + (n % 26 || 26)) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+function isBool(v) {
+  const s = (v || '').toString().toUpperCase().trim();
+  return s === 'TRUE' || s === 'FALSE';
+}
+
+function getCheckboxCols(headers, rows, startIdx) {
+  const cols = [];
+  headers.forEach((h, i) => {
+    if (i < startIdx) return;
+    let bools = 0, total = 0;
+    rows.forEach(r => { const v = (r[i] || '').toString().trim(); if (v) { total++; if (isBool(v)) bools++; } });
+    if (total > 0 && bools / total >= 0.4) cols.push({ idx: i, name: h });
+  });
+  return cols;
+}
+
+function rowProgress(r, cbCols) {
+  if (!cbCols.length) return 0;
+  const done = cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length;
+  return Math.round(done / cbCols.length * 100);
+}
+
+function getChapters(rows) {
+  const chs = new Set();
+  rows.forEach(r => { const ch = (r[0] || '').split('.')[0].trim(); if (ch) chs.add(ch); });
+  return ['All', ...Array.from(chs).sort((a, b) => {
+    const na = parseFloat(a), nb = parseFloat(b);
+    return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
+  })];
 }
 
 function render() {
-    const container = document.getElementById('main-content');
-    if (!appData.names || appData.names.length === 0) {
-        if (appData.activeTab !== 'settings') {
-             container.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold">No sheets found. Check your API key.</div>`;
-        } else {
-             renderSettings(container);
-        }
-        return;
-    }
+  const tc = document.getElementById('tabContent');
+  if (!API_KEY) { showSetup(); return; }
+  if (activeTab === 'checklist') renderTable(tc, mainSheetName, true);
+  else if (activeTab === 'sheets') renderOtherSheets(tc);
+  else renderManage(tc);
+}
 
-    const sheetName = appData.activeTab === 'tracker' ? appData.names[0] : (appData.names[1] || appData.names[0]);
-    document.getElementById('active-sheet-name').textContent = sheetName;
+function renderTable(container, sheetName, isMain) {
+  const data = allSheetData[sheetName];
+  if (!data) { container.innerHTML = '<div class="notice">Click ↻ Sync to load data.</div>'; return; }
 
-    if (appData.activeTab === 'settings') {
-        renderSettings(container);
-        return;
-    }
+  const { headers, rows } = data;
+  const startIdx = isMain ? 2 : 1;
+  const cbCols = getCheckboxCols(headers, rows, startIdx);
 
-    const data = appData.sheets[sheetName];
-    if (!data) return;
-
-    const cbCols = getCheckboxCols(data.headers, data.rows);
-    
-    let html = `
-        <div class="mb-6 space-y-3">
-            <div class="relative">
-                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input type="text" placeholder="Find Verse ID or Title..." 
-                    class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
-                    oninput="appData.search=this.value; render()" value="${appData.search}">
-            </div>
-        </div>
-    `;
-
-    const filtered = data.rows.filter(r => 
-        r && r.length > 0 && (String(r[0] || '') + String(r[1] || '')).toLowerCase().includes(appData.search.toLowerCase())
-    );
-
-    filtered.forEach((row, rIdx) => {
-        const id = row[0] || "?";
-        const title = row[1] || "No Title";
-        const total = cbCols.length;
-        const done = cbCols.filter(c => String(row[c.idx] || '').toUpperCase() === 'TRUE').length;
-        const pct = total > 0 ? Math.round((done/total) * 100) : 0;
-
-        html += `
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm mb-6 overflow-hidden deck-card">
-                <div class="p-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="bg-slate-900 text-white text-[10px] font-black px-2 py-0.5 rounded">${id}</span>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${row[1] ? 'Verse Item' : ''}</span>
-                        </div>
-                        <h2 class="font-extrabold text-slate-800 text-lg leading-tight">${title}</h2>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-[20px] font-black text-indigo-600 leading-none">${pct}%</div>
-                        <div class="text-[9px] font-bold text-slate-400 uppercase mt-1">Complete</div>
-                    </div>
-                </div>
-                
-                <div class="divide-y divide-slate-50">
-                    ${cbCols.map(col => {
-                        const isChecked = String(row[col.idx] || '').toUpperCase() === 'TRUE';
-                        return `
-                            <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-                                <div class="flex items-center gap-3 pr-4">
-                                    <div class="w-2 h-2 rounded-full ${isChecked ? 'bg-green-500' : 'bg-slate-200'}"></div>
-                                    <span class="text-sm font-bold text-slate-600 leading-tight">${col.name}</span>
-                                </div>
-                                <label class="toggle-switch shrink-0">
-                                    <input type="checkbox" ${isChecked ? 'checked' : ''} 
-                                        onchange="updateCell('${sheetName}', ${data.rows.indexOf(row)}, ${col.idx}, this.checked)">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
+  let displayRows = rows;
+  if (isMain) {
+    displayRows = rows.filter(r => {
+      const ch = (r[0] || '').split('.')[0].trim();
+      const chOk = filterChapter === 'All' || ch === filterChapter;
+      const txtOk = !filterText || (r[0] || '').toLowerCase().includes(filterText.toLowerCase()) || (r[1] || '').toLowerCase().includes(filterText.toLowerCase());
+      return chOk && txtOk;
     });
+  }
 
-    container.innerHTML = html || `<div class="text-center py-20 text-slate-400 font-bold">No results found</div>`;
-    lucide.createIcons();
+  const done = rows.filter(r => rowProgress(r, cbCols) === 100).length;
+  const totalCbs = cbCols.length * rows.length;
+  const checkedCbs = rows.reduce((a, r) => a + cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length, 0);
+  const pct = totalCbs ? Math.round(checkedCbs / totalCbs * 100) : 0;
+
+  let html = `<div class="stats" id="stats-${sheetName}">
+    <div class="stat"><strong>${rows.length}</strong>Total rows</div>
+    <div class="stat"><strong id="done-${sheetName}">${done}</strong>Fully done</div>
+    <div class="stat"><strong id="checked-${sheetName}">${checkedCbs}/${totalCbs}</strong>Tasks checked</div>
+    <div class="stat"><strong id="pct-${sheetName}">${pct}%</strong>Progress</div>
+  </div>`;
+
+  if (isMain) {
+    html += `<div class="toolbar">
+      <span class="filter-label">Chapter:</span>
+      ${getChapters(rows).map(c => `<button class="chapter-btn${c === filterChapter ? ' active' : ''}" onclick="filterChapter='${c}';render()">${c}</button>`).join('')}
+      <input class="search" placeholder="Search..." value="${filterText}" oninput="filterText=this.value;render()">
+    </div>`;
+  }
+
+  if (cbCols.length === 0) {
+    // No checkbox columns — render as plain text reference
+    const text = [headers, ...rows].map(r => r.join('   ')).join('\n');
+    container.innerHTML = html + `<div class="ref-content">${text.replace(/</g,'&lt;')}</div>`;
+    return;
+  }
+
+  html += `<div class="table-wrap"><table><thead><tr>
+    <th>${headers[0] || 'ID'}</th>
+    <th>Progress</th>
+    ${cbCols.map(c => `<th class="center" title="${c.name}">${c.name.length > 10 ? c.name.substring(0, 9) + '…' : c.name}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  displayRows.forEach(r => {
+    const realIdx = rows.indexOf(r);
+    const prog = rowProgress(r, cbCols);
+    html += `<tr>
+      <td class="row-id">${r[0] || ''}</td>
+      <td><div class="progress-wrap">
+        <span class="progress-pct">${prog}%</span>
+        <div class="progress-bar"><div class="progress-fill" style="width:${prog}%"></div></div>
+      </div></td>
+      ${cbCols.map(c => {
+        const val = (r[c.idx] || '').toString().toUpperCase() === 'TRUE';
+        return `<td class="center"><input type="checkbox" class="cb" ${val ? 'checked' : ''} onchange="toggleCell('${sheetName}',${realIdx},${c.idx},this.checked)"></td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
 }
 
-function renderSettings(container) {
-    container.innerHTML = `
-        <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-            <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
-                <i data-lucide="key" class="w-8 h-8 text-indigo-600"></i>
-            </div>
-            <h2 class="text-2xl font-black text-slate-900 mb-2">Cloud Sync</h2>
-            <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed">Connect your Google Sheets API key to enable live progress tracking and cross-device sync.</p>
-            
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">Google API Key</label>
-                    <input type="password" id="key-input" value="${API_KEY}" 
-                        class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" 
-                        placeholder="AIzaSy...">
-                </div>
-                <button onclick="saveKey()" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95">
-                    Authorize & Load
-                </button>
-            </div>
-        </div>
-    `;
-    lucide.createIcons();
+function toggleCell(sheetName, rowIdx, colIdx, checked) {
+  allSheetData[sheetName].rows[rowIdx][colIdx] = checked ? 'TRUE' : 'FALSE';
+  saveCell(sheetName, rowIdx, colIdx, checked);
+  const data = allSheetData[sheetName];
+  const startIdx = sheetName === mainSheetName ? 2 : 1;
+  const cbCols = getCheckboxCols(data.headers, data.rows, startIdx);
+  const done = data.rows.filter(r => rowProgress(r, cbCols) === 100).length;
+  const totalCbs = cbCols.length * data.rows.length;
+  const checkedCbs = data.rows.reduce((a, r) => a + cbCols.filter(c => (r[c.idx] || '').toString().toUpperCase() === 'TRUE').length, 0);
+  const pct = totalCbs ? Math.round(checkedCbs / totalCbs * 100) : 0;
+  const d = document.getElementById('done-' + sheetName);
+  const ch = document.getElementById('checked-' + sheetName);
+  const p = document.getElementById('pct-' + sheetName);
+  if (d) d.textContent = done;
+  if (ch) ch.textContent = checkedCbs + '/' + totalCbs;
+  if (p) p.textContent = pct + '%';
 }
 
-async function updateCell(sheet, rowIdx, colIdx, val) {
-    if (!appData.sheets[sheet] || !appData.sheets[sheet].rows[rowIdx]) return;
-    
-    // Update local UI immediately
-    appData.sheets[sheet].rows[rowIdx][colIdx] = val ? 'TRUE' : 'FALSE';
-    render();
+function renderOtherSheets(tc) {
+  const others = sheetNames.filter(n => n !== mainSheetName);
+  if (!others.length) { tc.innerHTML = '<div class="notice">No other sheets found.</div>'; return; }
+  if (!activeSubSheet || !others.includes(activeSubSheet)) activeSubSheet = others[0];
 
-    showToast("Saving...", true);
-    
-    try {
-        const colLetter = getColumnLetter(colIdx);
-        const range = `${sheet}!${colLetter}${rowIdx + 2}`;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: [[val ? 'TRUE' : 'FALSE']] })
-        });
-        if (!res.ok) throw new Error();
-        showToast("Progress Saved", false);
-    } catch (e) {
-        showToast("Save Error", false, true);
-    }
+  let html = `<div class="sheet-tabs">${others.map(n =>
+    `<div class="sheet-tab${n === activeSubSheet ? ' active' : ''}" onclick="activeSubSheet='${n}';renderOtherSheets(document.getElementById('tabContent'))">${n}</div>`
+  ).join('')}</div><div id="subSheetContent"></div>`;
+  tc.innerHTML = html;
+  renderTable(document.getElementById('subSheetContent'), activeSubSheet, false);
 }
 
-function getColumnLetter(n) {
-    let letter = "";
-    while (n >= 0) {
-        letter = String.fromCharCode((n % 26) + 65) + letter;
-        n = Math.floor(n / 26) - 1;
-    }
-    return letter;
+function renderManage(tc) {
+  const data = allSheetData[mainSheetName];
+  if (!data) { tc.innerHTML = '<div class="notice">Sync first.</div>'; return; }
+  const cbCols = getCheckboxCols(data.headers, data.rows, 2);
+  tc.innerHTML = `
+    <div class="notice">Columns auto-update from your Google Sheet headers. Add or rename in Sheets → click ↻ Sync.</div>
+    <div class="manage-box">
+      <h3>Checkbox columns in main sheet (${cbCols.length})</h3>
+      ${cbCols.map(c => `<div class="col-item"><span>${c.name}</span><span class="col-letter">Col ${colToLetter(c.idx)}</span></div>`).join('')}
+    </div>
+    <div class="manage-box">
+      <h3>All sheets (${sheetNames.length})</h3>
+      ${sheetNames.map((n, i) => {
+        const d = allSheetData[n];
+        const cbs = d ? getCheckboxCols(d.headers, d.rows, i === 0 ? 2 : 1).length : 0;
+        return `<div class="col-item">
+          <span>${n} ${i === 0 ? '<span style="font-size:10px;background:#f0f0ec;padding:2px 6px;border-radius:4px;margin-left:4px">main</span>' : ''}</span>
+          <span class="col-letter">${cbs} checkbox col${cbs !== 1 ? 's' : ''}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="manage-box">
+      <h3>How to add or rename columns</h3>
+      <p style="font-size:13px;color:#666;line-height:1.7">1. Open your Google Sheet<br>2. Edit any header in Row 1<br>3. For new columns: add header in Row 1, fill with TRUE/FALSE<br>4. Come back and click ↻ Sync — changes appear automatically</p>
+    </div>`;
 }
 
-function switchView(view) {
-    appData.activeTab = view;
-    appData.search = '';
-    
-    const btns = ['tracker', 'planner', 'settings'];
-    btns.forEach(b => {
-        const el = document.getElementById(`nav-${b}`);
-        if (el) {
-            el.classList.remove('text-indigo-600');
-            el.classList.add('text-slate-400');
-        }
-    });
-    
-    const activeEl = document.getElementById(`nav-${view}`);
-    if (activeEl) {
-        activeEl.classList.remove('text-slate-400');
-        activeEl.classList.add('text-indigo-600');
-    }
-    
-    render();
+function showSetup() {
+  document.getElementById('tabContent').innerHTML = `
+    <div class="setup-box">
+      <h2>Connect your Google Sheet</h2>
+      <p>Your Sheet ID is already built in. Paste your Google API key below.</p>
+      <p>Make sure your Google Sheet is shared:<br><strong>Share → Anyone with the link → Editor</strong></p>
+      <input id="apiKeyInput" placeholder="Paste your Google API key (AIza...)" value="${API_KEY}">
+      <br><br>
+      <button class="btn-primary" onclick="saveKey()">Connect & Load Data</button>
+    </div>`;
 }
 
 function saveKey() {
-    const val = document.getElementById('key-input').value.trim();
-    if (val) {
-        API_KEY = val;
-        localStorage.setItem('gapi_key', val);
-        loadData();
-        switchView('tracker');
-    }
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) return;
+  API_KEY = k; localStorage.setItem('gapi_key', k); loadData();
 }
 
-function showToast(msg, loading, error = false) {
-    const toast = document.getElementById('toast');
-    const text = document.getElementById('toast-text');
-    const icon = document.getElementById('toast-icon');
-    const spinner = document.getElementById('toast-spinner');
-
-    if (text) text.textContent = msg;
-    if (toast) toast.classList.add('show');
-    
-    if (loading) {
-        if (spinner) spinner.classList.remove('hidden');
-        if (icon) icon.classList.add('hidden');
-    } else {
-        if (spinner) spinner.classList.add('hidden');
-        if (icon) {
-            icon.classList.remove('hidden');
-            icon.style.color = error ? '#f87171' : '#4ade80';
-        }
-        setTimeout(() => { if (toast) toast.classList.remove('show'); }, 2000);
-    }
-    lucide.createIcons();
-}
-
-// Init
-window.onload = () => {
-    lucide.createIcons();
-    if (API_KEY) loadData();
-    else switchView('settings');
-};
+if (API_KEY) { loadData(); } else { showSetup(); }
 </script>
 </body>
 </html>
