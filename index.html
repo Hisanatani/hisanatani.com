@@ -80,7 +80,7 @@ input[type="checkbox"]{
 
 <script>
 const SHEET_ID = "13pUQeLmSwca3Jl4GCvOQ82Whiu79fgAfBAKi4PbhNKM";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCS07Se2VgpSoK0qeYj-zm4DQzJK7n_Gse0OMc0y-0LxkacVi96vAt0aWq4FX66kQ/exec";
+const SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
 const API_KEY = localStorage.getItem("gapi_key") || "";
 
 let data = [];
@@ -93,7 +93,7 @@ async function loadData(){
     location.reload();
   }
 
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Content Creation Flow?key=${API_KEY}`);
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Content_Checklist?key=${API_KEY}`);
   const json = await res.json();
 
   headers = json.values[0];
