@@ -3,368 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Content Tracker & Planner</title>
-    <!-- Tailwind CSS -->
+    <title>hisanatani.com Deck</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0f172a',
-                        accent: '#6366f1',
-                        success: '#22c55e',
-                        bgMain: '#f8fafc'
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        * { -webkit-tap-highlight-color: transparent; }
-        body { 
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: #f8fafc;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .deck-card { transition: transform 0.2s ease; }
+        .deck-card:active { transform: scale(0.98); }
         
-        /* Deck-style checkbox toggle */
-        .deck-toggle input:checked + .toggle-bg { background-color: #22c55e; }
-        .deck-toggle input:checked + .toggle-bg .toggle-dot { transform: translateX(1.25rem); }
-        
-        .card-anim { animation: slideIn 0.3s ease-out forwards; }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Custom Toggle Style */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
         }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #e2e8f0;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        input:checked + .slider { background-color: #22c55e; }
+        input:checked + .slider:before { transform: translateX(20px); }
 
         #toast {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateY(-120%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(150%);
         }
         #toast.show { transform: translateY(0); }
     </style>
 </head>
-<body class="text-slate-900 antialiased h-screen flex flex-col overflow-hidden">
+<body class="pb-24">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-white border-b border-slate-200 px-4 py-3 z-50 shrink-0 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+    <!-- Sticky Header -->
+    <header class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 z-50 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+                <i data-lucide="layout-grid" class="w-5 h-5 text-white"></i>
             </div>
             <div>
-                <h1 class="font-bold text-sm leading-none">hisanatani.com</h1>
-                <p class="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-wider" id="current-sheet-label">Tracker</p>
+                <h1 class="text-sm font-extrabold text-slate-900 leading-tight">hisanatani.com</h1>
+                <p id="active-sheet-name" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Loading...</p>
             </div>
         </div>
-        <button onclick="loadData()" class="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors relative" id="syncBtn">
-            <i data-lucide="refresh-cw" class="w-4 h-4 text-slate-600" id="syncIcon"></i>
+        <button onclick="loadData()" class="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full active:bg-slate-200 transition-colors">
+            <i data-lucide="refresh-cw" id="sync-icon" class="w-4 h-4 text-slate-600"></i>
         </button>
     </header>
 
-    <!-- Global Feedback Toast -->
-    <div class="fixed top-4 left-0 right-0 z-[100] flex justify-center pointer-events-none">
-        <div id="toast" class="bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-3 text-sm font-medium">
-            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-400" id="toast-icon"></i>
-            <span id="toast-msg">Syncing data...</span>
-        </div>
-    </div>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto no-scrollbar pb-32" id="main-scroll">
-        <div id="errorDisplay" class="hidden m-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex gap-3">
-            <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
-            <span id="errorMsg"></span>
-        </div>
-        
-        <div id="appContent" class="p-4 max-w-2xl mx-auto space-y-6">
-            <!-- Content will be injected here -->
+    <!-- Content Area -->
+    <main id="main-content" class="p-4 max-w-2xl mx-auto">
+        <div id="loader" class="py-20 text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-slate-900"></div>
+            <p class="text-slate-500 text-xs font-bold mt-4 uppercase tracking-tighter">Initializing Deck...</p>
         </div>
     </main>
 
-    <!-- Bottom Menu Navigation -->
-    <nav class="bg-white/80 backdrop-blur-md border-t border-slate-200 fixed bottom-0 w-full z-50 pb-[env(safe-area-inset-bottom)]">
-        <div class="flex justify-around items-center h-16 max-w-lg mx-auto">
-            <button onclick="switchTab('tracker')" id="tab-tracker" class="flex flex-col items-center gap-1 text-accent">
-                <i data-lucide="layout-list" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold uppercase">Tracker</span>
-            </button>
-            <button onclick="switchTab('planner')" id="tab-planner" class="flex flex-col items-center gap-1 text-slate-400">
-                <i data-lucide="calendar-check" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold uppercase">Planner</span>
-            </button>
-            <button onclick="switchTab('settings')" id="tab-settings" class="flex flex-col items-center gap-1 text-slate-400">
-                <i data-lucide="settings-2" class="w-5 h-5"></i>
-                <span class="text-[10px] font-bold uppercase">Settings</span>
-            </button>
-        </div>
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center z-50">
+        <button onclick="switchView('tracker')" id="nav-tracker" class="flex flex-col items-center gap-1 text-indigo-600">
+            <i data-lucide="check-square" class="w-6 h-6"></i>
+            <span class="text-[10px] font-extrabold uppercase">Tracker</span>
+        </button>
+        <button onclick="switchView('planner')" id="nav-planner" class="flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="calendar" class="w-6 h-6"></i>
+            <span class="text-[10px] font-extrabold uppercase">Planner</span>
+        </button>
+        <button onclick="switchView('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="settings" class="w-6 h-6"></i>
+            <span class="text-[10px] font-extrabold uppercase">Setup</span>
+        </button>
     </nav>
+
+    <!-- Global Toast Notification -->
+    <div class="fixed bottom-24 left-0 right-0 flex justify-center z-[60] pointer-events-none">
+        <div id="toast" class="bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold">
+            <div id="toast-spinner" class="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full hidden"></div>
+            <i id="toast-icon" data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+            <span id="toast-text">Sync Complete</span>
+        </div>
+    </div>
 
 <script>
 const SHEET_ID = '13pUQeLmSwca3Jl4GCvOQ82Whiu79fgAfBAKi4PbhNKM';
-const DEFAULT_API_KEY = 'AIzaSyByRHRdnpDDHLxBnCBV27mSRu0tu_dlAhg';
+let API_KEY = localStorage.getItem('gapi_key') || '';
 
-let API_KEY = DEFAULT_API_KEY;
-try { API_KEY = localStorage.getItem('gapi_key') || DEFAULT_API_KEY; } catch(e){}
-
-let appState = {
+let appData = {
     sheets: {},
     names: [],
     activeTab: 'tracker',
-    filters: {
-        chapter: 'All',
-        search: ''
-    }
+    search: '',
+    chapter: 'All'
 };
 
-// Initial Load
-document.addEventListener("DOMContentLoaded", () => {
-    lucide.createIcons();
-    if (API_KEY) loadData();
-    else switchTab('settings');
-});
-
 async function loadData() {
-    toggleSyncAnim(true);
-    showToast("Syncing latest data...", true);
+    if (!API_KEY) { switchView('settings'); return; }
     
+    document.getElementById('sync-icon').classList.add('animate-spin');
+    showToast("Fetching Sheets...", true);
+
     try {
         const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
         const meta = await metaRes.json();
         if (meta.error) throw new Error(meta.error.message);
         
-        appState.names = meta.sheets.map(s => s.properties.title);
-        appState.sheets = {};
-
-        for (const name of appState.names) {
+        appData.names = meta.sheets.map(s => s.properties.title);
+        
+        for (const name of appData.names) {
             const dataRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
             const data = await dataRes.json();
-            if (data.values) {
-                appState.sheets[name] = {
-                    headers: data.values[0] || [],
-                    rows: data.values.slice(1).filter(r => r.length > 0 && r[0])
-                };
-            }
+            appData.sheets[name] = {
+                headers: data.values[0] || [],
+                rows: (data.values || []).slice(1).filter(r => r[0])
+            };
         }
         
-        hideError();
         render();
-        showToast("Connected!", false);
-    } catch (e) {
-        showError(e.message);
-        showToast("Connection failed", false, true);
+        showToast("Synced Successfully", false);
+    } catch (err) {
+        console.error(err);
+        showToast("Sync Error", false, true);
     } finally {
-        toggleSyncAnim(false);
+        document.getElementById('sync-icon').classList.remove('animate-spin');
     }
+}
+
+function getCheckboxCols(headers, rows) {
+    // Detect columns that primarily contain TRUE/FALSE
+    return headers.map((name, idx) => {
+        let isCheck = false;
+        // Check first 10 rows to see if it's a boolean column
+        for(let i=0; i<Math.min(rows.length, 10); i++) {
+            const val = String(rows[i][idx] || '').toUpperCase();
+            if (val === 'TRUE' || val === 'FALSE' || rows[i][idx] === undefined) {
+                isCheck = true;
+            } else if (val.trim() !== "") {
+                isCheck = false;
+                break;
+            }
+        }
+        return isCheck ? { name, idx } : null;
+    }).filter(c => c !== null && c.idx > 1); // Skip ID and Chapter
 }
 
 function render() {
-    const container = document.getElementById('appContent');
-    const label = document.getElementById('current-sheet-label');
-    
-    if (appState.activeTab === 'tracker') {
-        label.textContent = "Content Tracker";
-        renderTracker(container);
-    } else if (appState.activeTab === 'planner') {
-        label.textContent = "Daily Planner";
-        renderPlanner(container);
-    } else {
-        label.textContent = "App Settings";
-        renderSettings(container);
-    }
-    
-    lucide.createIcons();
-}
+    const container = document.getElementById('main-content');
+    const sheetName = appData.activeTab === 'tracker' ? appData.names[0] : (appData.names[1] || appData.names[0]);
+    document.getElementById('active-sheet-name').textContent = sheetName;
 
-function renderTracker(container) {
-    const sheetName = appState.names[0];
-    const data = appState.sheets[sheetName];
+    if (appData.activeTab === 'settings') {
+        renderSettings(container);
+        return;
+    }
+
+    const data = appData.sheets[sheetName];
     if (!data) return;
 
-    const { headers, rows } = data;
-    const checkboxCols = getCheckboxColumns(headers, rows);
-    const chapters = getChapters(rows);
-
+    const cbCols = getCheckboxCols(data.headers, data.rows);
+    
     let html = `
-        <div class="sticky top-0 bg-bgMain/90 backdrop-blur-sm z-20 pb-4 space-y-3">
+        <div class="mb-6 space-y-3">
             <div class="relative">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input type="text" placeholder="Search content..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm" value="${appState.filters.search}" oninput="appState.filters.search=this.value;render()">
-            </div>
-            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                ${chapters.map(ch => `
-                    <button onclick="appState.filters.chapter='${ch}';render()" class="shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${appState.filters.chapter === ch ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200'}">
-                        ${ch}
-                    </button>
-                `).join('')}
+                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                <input type="text" placeholder="Find Verse ID or Title..." 
+                    class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
+                    oninput="appData.search=this.value; render()" value="${appData.search}">
             </div>
         </div>
-        <div class="space-y-5">
     `;
 
-    const filteredRows = rows.filter(r => {
-        const matchesChapter = appState.filters.chapter === 'All' || r[0].startsWith(appState.filters.chapter);
-        const matchesSearch = !appState.filters.search || (r[0]+r[1]).toLowerCase().includes(appState.filters.search.toLowerCase());
-        return matchesChapter && matchesSearch;
-    });
+    const filtered = data.rows.filter(r => 
+        (r[0] + r[1]).toLowerCase().includes(appData.search.toLowerCase())
+    );
 
-    filteredRows.forEach((row, rowIndex) => {
+    filtered.forEach((row, rIdx) => {
         const id = row[0];
-        const title = row[1];
-        const prog = calculateRowProgress(row, checkboxCols);
-        
+        const title = row[1] || "No Title";
+        const total = cbCols.length;
+        const done = cbCols.filter(c => String(row[c.idx]).toUpperCase() === 'TRUE').length;
+        const pct = Math.round((done/total) * 100) || 0;
+
         html += `
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden card-anim">
-            <div class="p-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
-                <div class="flex items-center gap-3">
-                    <span class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded uppercase">${id}</span>
-                    <h3 class="font-bold text-sm text-slate-800 truncate max-w-[180px]">${title}</h3>
-                </div>
-                <div class="text-right">
-                    <div class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Progress</div>
-                    <div class="text-xs font-black text-indigo-600">${prog}%</div>
-                </div>
-            </div>
-            
-            <!-- The Deck System -->
-            <div class="divide-y divide-slate-50">
-                ${checkboxCols.map(col => {
-                    const isChecked = (row[col.idx] || '').toString().toUpperCase() === 'TRUE';
-                    return `
-                    <div class="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="w-1.5 h-1.5 rounded-full ${isChecked ? 'bg-success' : 'bg-slate-200'}"></div>
-                            <span class="text-sm font-semibold text-slate-700">${col.name}</span>
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm mb-6 overflow-hidden deck-card">
+                <div class="p-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="bg-slate-900 text-white text-[10px] font-black px-2 py-0.5 rounded">${id}</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${row[1] ? 'Verse Item' : ''}</span>
                         </div>
-                        <label class="deck-toggle inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only" ${isChecked ? 'checked' : ''} onchange="updateCell('${sheetName}', ${rows.indexOf(row)}, ${col.idx}, this.checked)">
-                            <div class="toggle-bg w-10 h-5 bg-slate-200 rounded-full p-0.5 transition-colors duration-200 ease-in-out">
-                                <div class="toggle-dot w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out"></div>
+                        <h2 class="font-extrabold text-slate-800 text-lg leading-tight">${title}</h2>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[20px] font-black text-indigo-600 leading-none">${pct}%</div>
+                        <div class="text-[9px] font-bold text-slate-400 uppercase mt-1">Complete</div>
+                    </div>
+                </div>
+                
+                <div class="divide-y divide-slate-50">
+                    ${cbCols.map(col => {
+                        const isChecked = String(row[col.idx]).toUpperCase() === 'TRUE';
+                        return `
+                            <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                                <div class="flex items-center gap-3 pr-4">
+                                    <div class="w-2 h-2 rounded-full ${isChecked ? 'bg-green-500' : 'bg-slate-200'}"></div>
+                                    <span class="text-sm font-bold text-slate-600 leading-tight">${col.name}</span>
+                                </div>
+                                <label class="toggle-switch shrink-0">
+                                    <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                                        onchange="updateCell('${sheetName}', ${data.rows.indexOf(row)}, ${col.idx}, this.checked)">
+                                    <span class="slider"></span>
+                                </label>
                             </div>
-                        </label>
-                    </div>`;
-                }).join('')}
+                        `;
+                    }).join('')}
+                </div>
             </div>
-        </div>`;
+        `;
     });
 
-    html += `</div>`;
-    container.innerHTML = html;
-}
-
-function renderPlanner(container) {
-    const sheetName = appState.names[1] || appState.names[0];
-    const data = appState.sheets[sheetName];
-    if (!data) return;
-
-    const { headers, rows } = data;
-    const checkboxCols = getCheckboxColumns(headers, rows);
-    
-    let html = `<div class="space-y-4">`;
-
-    rows.forEach((row, rowIndex) => {
-        const title = row[0] || 'Task';
-        html += `
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden card-anim">
-            <div class="p-4 bg-slate-50/50 border-b border-slate-100">
-                <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="check-circle" class="w-4 h-4 text-indigo-500"></i>
-                    ${title}
-                </h3>
-            </div>
-            <div class="divide-y divide-slate-50">
-                ${checkboxCols.map(col => {
-                    const isChecked = (row[col.idx] || '').toString().toUpperCase() === 'TRUE';
-                    return `
-                    <div class="flex items-center justify-between p-4">
-                        <span class="text-sm font-semibold text-slate-600">${col.name}</span>
-                        <label class="deck-toggle inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only" ${isChecked ? 'checked' : ''} onchange="updateCell('${sheetName}', ${rowIndex}, ${col.idx}, this.checked)">
-                            <div class="toggle-bg w-10 h-5 bg-slate-200 rounded-full p-0.5 transition-colors">
-                                <div class="toggle-dot w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
-                            </div>
-                        </label>
-                    </div>`;
-                }).join('')}
-            </div>
-        </div>`;
-    });
-
-    html += `</div>`;
-    container.innerHTML = html;
+    container.innerHTML = html || `<div class="text-center py-20 text-slate-400 font-bold">No results found</div>`;
+    lucide.createIcons();
 }
 
 function renderSettings(container) {
     container.innerHTML = `
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 class="text-lg font-black mb-1">Configuration</h2>
-            <p class="text-xs text-slate-500 mb-6 font-medium">Link your Google account for live sync.</p>
+        <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+            <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
+                <i data-lucide="key" class="w-8 h-8 text-indigo-600"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 mb-2">Cloud Sync</h2>
+            <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed">Connect your Google Sheets API key to enable live progress tracking and cross-device sync.</p>
             
-            <div class="space-y-5">
+            <div class="space-y-6">
                 <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-2">Google Sheets ID</label>
-                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-mono text-slate-500 break-all">${SHEET_ID}</div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">Google API Key</label>
+                    <input type="password" id="key-input" value="${API_KEY}" 
+                        class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" 
+                        placeholder="AIzaSy...">
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-2">Google API Key</label>
-                    <input type="password" id="apiKeyIn" value="${API_KEY}" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIza...">
-                </div>
-                <button onclick="saveApiKey()" class="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-lg">Save & Connect</button>
+                <button onclick="saveKey()" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95">
+                    Authorize & Load
+                </button>
             </div>
         </div>
     `;
+    lucide.createIcons();
 }
 
-// Helpers
-function getCheckboxColumns(headers, rows) {
-    const cols = [];
-    headers.forEach((h, i) => {
-        // A column is a checkbox only if at least some rows contain TRUE/FALSE
-        let containsBool = false;
-        rows.slice(0, 20).forEach(r => {
-            const val = (r[i] || '').toString().toUpperCase();
-            if (val === 'TRUE' || val === 'FALSE') containsBool = true;
-        });
-        if (containsBool) cols.push({ idx: i, name: h });
-    });
-    return cols;
-}
-
-function calculateRowProgress(row, cbCols) {
-    if (!cbCols.length) return 0;
-    const done = cbCols.filter(c => (row[c.idx] || '').toString().toUpperCase() === 'TRUE').length;
-    return Math.round((done / cbCols.length) * 100);
-}
-
-function getChapters(rows) {
-    const chs = new Set();
-    rows.forEach(r => { 
-        const match = (r[0] || '').split('.')[0];
-        if (match) chs.add(match);
-    });
-    return ['All', ...Array.from(chs).sort()];
-}
-
-function updateCell(sheet, rowIdx, colIdx, val) {
-    // Update local state for instant UI feel
-    appState.sheets[sheet].rows[rowIdx][colIdx] = val ? 'TRUE' : 'FALSE';
+async function updateCell(sheet, rowIdx, colIdx, val) {
+    // Update local UI immediately
+    appData.sheets[sheet].rows[rowIdx][colIdx] = val ? 'TRUE' : 'FALSE';
     render();
-    
-    // Save to Google Sheets
-    saveToSheet(sheet, rowIdx, colIdx, val);
-}
 
-async function saveToSheet(sheetName, rowIdx, colIdx, val) {
     showToast("Saving...", true);
-    const colLetter = String.fromCharCode(65 + colIdx); // Simple A-Z
-    const range = `${sheetName}!${colLetter}${rowIdx + 2}`;
     
     try {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=RAW&key=${API_KEY}`, {
+        const colLetter = getColumnLetter(colIdx);
+        const range = `${sheet}!${colLetter}${rowIdx + 2}`;
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ values: [[val ? 'TRUE' : 'FALSE']] })
@@ -372,68 +284,73 @@ async function saveToSheet(sheetName, rowIdx, colIdx, val) {
         if (!res.ok) throw new Error();
         showToast("Progress Saved", false);
     } catch (e) {
-        showToast("Save Failed", false, true);
+        showToast("Save Error", false, true);
     }
 }
 
-function switchTab(tab) {
-    appState.activeTab = tab;
-    document.querySelectorAll('nav button').forEach(b => {
-        b.classList.remove('text-accent');
-        b.classList.add('text-slate-400');
+function getColumnLetter(n) {
+    let letter = "";
+    while (n >= 0) {
+        letter = String.fromCharCode((n % 26) + 65) + letter;
+        n = Math.floor(n / 26) - 1;
+    }
+    return letter;
+}
+
+function switchView(view) {
+    appData.activeTab = view;
+    appData.search = '';
+    
+    const btns = ['tracker', 'planner', 'settings'];
+    btns.forEach(b => {
+        const el = document.getElementById(`nav-${b}`);
+        el.classList.remove('text-indigo-600');
+        el.classList.add('text-slate-400');
     });
-    document.getElementById(`tab-${tab}`).classList.add('text-accent');
-    document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
+    
+    document.getElementById(`nav-${view}`).classList.remove('text-slate-400');
+    document.getElementById(`nav-${view}`).classList.add('text-indigo-600');
+    
     render();
 }
 
-function saveApiKey() {
-    const key = document.getElementById('apiKeyIn').value.trim();
-    if (!key) return;
-    API_KEY = key;
-    try { localStorage.setItem('gapi_key', key); } catch(e){}
-    loadData();
-    switchTab('tracker');
+function saveKey() {
+    const val = document.getElementById('key-input').value.trim();
+    if (val) {
+        API_KEY = val;
+        localStorage.setItem('gapi_key', val);
+        loadData();
+        switchView('tracker');
+    }
 }
 
-function showToast(msg, isSaving, isError) {
+function showToast(msg, loading, error = false) {
     const toast = document.getElementById('toast');
-    const msgEl = document.getElementById('toast-msg');
+    const text = document.getElementById('toast-text');
     const icon = document.getElementById('toast-icon');
-    
-    msgEl.textContent = msg;
+    const spinner = document.getElementById('toast-spinner');
+
+    text.textContent = msg;
     toast.classList.add('show');
     
-    if (isSaving) {
-        icon.className = "w-4 h-4 animate-spin text-indigo-400";
-        icon.setAttribute('data-lucide', 'loader-2');
-    } else if (isError) {
-        icon.className = "w-4 h-4 text-red-400";
-        icon.setAttribute('data-lucide', 'alert-circle');
-        setTimeout(() => toast.classList.remove('show'), 2000);
+    if (loading) {
+        spinner.classList.remove('hidden');
+        icon.classList.add('hidden');
     } else {
-        icon.className = "w-4 h-4 text-green-400";
-        icon.setAttribute('data-lucide', 'check');
+        spinner.classList.add('hidden');
+        icon.classList.remove('hidden');
+        icon.style.color = error ? '#f87171' : '#4ade80';
         setTimeout(() => toast.classList.remove('show'), 2000);
     }
     lucide.createIcons();
 }
 
-function showError(msg) {
-    const el = document.getElementById('errorDisplay');
-    document.getElementById('errorMsg').textContent = msg;
-    el.classList.remove('hidden');
-}
-
-function hideError() {
-    document.getElementById('errorDisplay').classList.add('hidden');
-}
-
-function toggleSyncAnim(active) {
-    const icon = document.getElementById('syncIcon');
-    if (active) icon.classList.add('animate-spin');
-    else icon.classList.remove('animate-spin');
-}
+// Init
+window.onload = () => {
+    lucide.createIcons();
+    if (API_KEY) loadData();
+    else switchView('settings');
+};
 </script>
 </body>
 </html>
