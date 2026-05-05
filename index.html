@@ -119,8 +119,14 @@ async function loadData() {
     showToast("Fetching Sheets...", true);
 
     try {
-        const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
-        const meta = await metaRes.json();
+        const metaRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`, {
+             method: 'GET'
+        }).catch(() => {
+            // Fallback for direct Google Sheets API if available
+        });
+
+        const gSheetMetaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
+        const meta = await gSheetMetaRes.json();
         if (meta.error) throw new Error(meta.error.message);
         
         appData.names = meta.sheets.map(s => s.properties.title);
@@ -128,9 +134,11 @@ async function loadData() {
         for (const name of appData.names) {
             const dataRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`);
             const data = await dataRes.json();
+            
+            const rawValues = data.values || [];
             appData.sheets[name] = {
-                headers: data.values[0] || [],
-                rows: (data.values || []).slice(1).filter(r => r[0])
+                headers: rawValues.length > 0 ? rawValues[0] : [],
+                rows: rawValues.length > 1 ? rawValues.slice(1).filter(r => r && r.length > 0 && r[0]) : []
             };
         }
         
@@ -145,6 +153,7 @@ async function loadData() {
 }
 
 function getCheckboxCols(headers, rows) {
+    if (!headers || !rows) return [];
     // Detect columns that primarily contain TRUE/FALSE
     return headers.map((name, idx) => {
         let isCheck = false;
@@ -164,6 +173,15 @@ function getCheckboxCols(headers, rows) {
 
 function render() {
     const container = document.getElementById('main-content');
+    if (!appData.names || appData.names.length === 0) {
+        if (appData.activeTab !== 'settings') {
+             container.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold">No sheets found. Check your API key.</div>`;
+        } else {
+             renderSettings(container);
+        }
+        return;
+    }
+
     const sheetName = appData.activeTab === 'tracker' ? appData.names[0] : (appData.names[1] || appData.names[0]);
     document.getElementById('active-sheet-name').textContent = sheetName;
 
@@ -189,15 +207,15 @@ function render() {
     `;
 
     const filtered = data.rows.filter(r => 
-        (r[0] + r[1]).toLowerCase().includes(appData.search.toLowerCase())
+        r && r.length > 0 && (String(r[0] || '') + String(r[1] || '')).toLowerCase().includes(appData.search.toLowerCase())
     );
 
     filtered.forEach((row, rIdx) => {
-        const id = row[0];
+        const id = row[0] || "?";
         const title = row[1] || "No Title";
         const total = cbCols.length;
-        const done = cbCols.filter(c => String(row[c.idx]).toUpperCase() === 'TRUE').length;
-        const pct = Math.round((done/total) * 100) || 0;
+        const done = cbCols.filter(c => String(row[c.idx] || '').toUpperCase() === 'TRUE').length;
+        const pct = total > 0 ? Math.round((done/total) * 100) : 0;
 
         html += `
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm mb-6 overflow-hidden deck-card">
@@ -217,7 +235,7 @@ function render() {
                 
                 <div class="divide-y divide-slate-50">
                     ${cbCols.map(col => {
-                        const isChecked = String(row[col.idx]).toUpperCase() === 'TRUE';
+                        const isChecked = String(row[col.idx] || '').toUpperCase() === 'TRUE';
                         return `
                             <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3 pr-4">
@@ -267,6 +285,8 @@ function renderSettings(container) {
 }
 
 async function updateCell(sheet, rowIdx, colIdx, val) {
+    if (!appData.sheets[sheet] || !appData.sheets[sheet].rows[rowIdx]) return;
+    
     // Update local UI immediately
     appData.sheets[sheet].rows[rowIdx][colIdx] = val ? 'TRUE' : 'FALSE';
     render();
@@ -304,12 +324,17 @@ function switchView(view) {
     const btns = ['tracker', 'planner', 'settings'];
     btns.forEach(b => {
         const el = document.getElementById(`nav-${b}`);
-        el.classList.remove('text-indigo-600');
-        el.classList.add('text-slate-400');
+        if (el) {
+            el.classList.remove('text-indigo-600');
+            el.classList.add('text-slate-400');
+        }
     });
     
-    document.getElementById(`nav-${view}`).classList.remove('text-slate-400');
-    document.getElementById(`nav-${view}`).classList.add('text-indigo-600');
+    const activeEl = document.getElementById(`nav-${view}`);
+    if (activeEl) {
+        activeEl.classList.remove('text-slate-400');
+        activeEl.classList.add('text-indigo-600');
+    }
     
     render();
 }
@@ -330,17 +355,19 @@ function showToast(msg, loading, error = false) {
     const icon = document.getElementById('toast-icon');
     const spinner = document.getElementById('toast-spinner');
 
-    text.textContent = msg;
-    toast.classList.add('show');
+    if (text) text.textContent = msg;
+    if (toast) toast.classList.add('show');
     
     if (loading) {
-        spinner.classList.remove('hidden');
-        icon.classList.add('hidden');
+        if (spinner) spinner.classList.remove('hidden');
+        if (icon) icon.classList.add('hidden');
     } else {
-        spinner.classList.add('hidden');
-        icon.classList.remove('hidden');
-        icon.style.color = error ? '#f87171' : '#4ade80';
-        setTimeout(() => toast.classList.remove('show'), 2000);
+        if (spinner) spinner.classList.add('hidden');
+        if (icon) {
+            icon.classList.remove('hidden');
+            icon.style.color = error ? '#f87171' : '#4ade80';
+        }
+        setTimeout(() => { if (toast) toast.classList.remove('show'); }, 2000);
     }
     lucide.createIcons();
 }
